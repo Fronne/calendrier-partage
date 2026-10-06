@@ -1,0 +1,178 @@
+import { useEffect, useState } from 'react'
+import type { SyncData } from '../../shared/types'
+import { api, errorText } from '../api'
+import { PALETTE } from '../colors'
+import { todayKey } from '../dates'
+import { ZONES } from '../holidays'
+import { disablePush, enablePush, isIos, isStandalone, pushEnabled, pushSupported } from '../push'
+import { useStore } from '../store'
+import { getTheme, setTheme, type Theme } from '../theme'
+
+const THEMES: { id: Theme; label: string }[] = [
+  { id: 'auto', label: 'Automatique' },
+  { id: 'light', label: 'Clair' },
+  { id: 'dark', label: 'Sombre' },
+]
+
+interface Props {
+  data: SyncData
+  zone: string
+  onZone: (zone: string) => void
+  onLogout: () => void
+}
+
+function exportData(data: SyncData) {
+  const content = { exported_at: new Date().toISOString(), members: data.members, events: data.events, tasks: data.tasks }
+  const url = URL.createObjectURL(new Blob([JSON.stringify(content, null, 2)], { type: 'application/json' }))
+  const link = document.createElement('a')
+  link.href = url
+  link.download = `calendrier-${todayKey()}.json`
+  link.click()
+  URL.revokeObjectURL(url)
+}
+
+export default function SettingsView({ data, zone, onZone, onLogout }: Props) {
+  const { me, members, mutate } = useStore()
+  const other = members.find((m) => m.id !== me.id)
+  const [name, setName] = useState(me.name)
+  const [color, setColor] = useState(me.color)
+  const [theme, setThemeState] = useState(getTheme)
+  const chooseTheme = (t: Theme) => {
+    setTheme(t)
+    setThemeState(t)
+  }
+  const [reminders, setReminders] = useState(false)
+  const [message, setMessage] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  useEffect(() => {
+    pushEnabled().then(setReminders)
+  }, [])
+
+  const run = async (fn: () => Promise<string | void>) => {
+    setBusy(true)
+    setMessage('')
+    try {
+      setMessage((await fn()) ?? '')
+    } catch (e) {
+      setMessage(errorText(e))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const saveMe = (changes: { name?: string; color?: string; notify_changes?: boolean }) =>
+    mutate({ method: 'PUT', path: '/me', body: { name: me.name, color: me.color, notify_changes: me.notify_changes, ...changes } })
+
+  const saveProfile = () =>
+    run(async () => {
+      await saveMe({ name: name.trim(), color })
+      return 'Profil enregistré.'
+    })
+
+  const toggleReminders = () =>
+    run(async () => {
+      if (reminders) await disablePush()
+      else await enablePush()
+      setReminders(!reminders)
+    })
+
+  const test = () =>
+    run(async () => {
+      const { sent } = await api<{ sent: number }>('/push/test', 'POST')
+      return sent ? 'Notification envoyée : elle arrive dans quelques secondes.' : "L'envoi a échoué. Désactivez puis réactivez les notifications."
+    })
+
+  // Sur iPhone, les notifications n'existent que pour une app ajoutée à l'écran d'accueil
+  const needsInstall = isIos() && !isStandalone()
+
+  return (
+    <div className="settings">
+      <section className="card">
+        <h2>Mon profil</h2>
+        <input value={name} onChange={(e) => setName(e.target.value)} maxLength={30} aria-label="Prénom" />
+        <div className="swatches">
+          {PALETTE.map((c) => (
+            <button key={c} aria-label={`Couleur ${c}`} className={c === color ? 'swatch on' : 'swatch'} style={{ background: c }} onClick={() => setColor(c)} />
+          ))}
+        </div>
+        <button className="primary" disabled={busy || !name.trim() || (name === me.name && color === me.color)} onClick={saveProfile}>
+          Enregistrer
+        </button>
+      </section>
+
+      <section className="card">
+        <h2>Apparence</h2>
+        <div className="segmented">
+          {THEMES.map((t) => (
+            <button key={t.id} className={t.id === theme ? 'on accent' : ''} onClick={() => chooseTheme(t.id)}>
+              {t.label}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section className="card">
+        <h2>Notifications sur ce téléphone</h2>
+        {needsInstall ? (
+          <p className="muted">
+            Sur iPhone, ouvrez cette page dans Safari, touchez le bouton Partager puis « Sur l'écran d'accueil ». Lancez ensuite l'application depuis son icône
+            et revenez ici pour activer les notifications.
+          </p>
+        ) : !pushSupported() ? (
+          <p className="muted">Ce navigateur ne permet pas les notifications.</p>
+        ) : (
+          <>
+            <p className="muted">{reminders ? 'Les notifications sont activées.' : 'Recevez les rappels de vos rendez-vous et tâches.'}</p>
+            <button className={reminders ? 'secondary' : 'primary'} disabled={busy} onClick={toggleReminders}>
+              {reminders ? 'Désactiver les notifications' : 'Activer les notifications'}
+            </button>
+            {reminders && (
+              <button className="secondary" disabled={busy} onClick={test}>
+                Envoyer une notification d'essai
+              </button>
+            )}
+          </>
+        )}
+        <label className="row">
+          <span>Me prévenir quand {other?.name ?? "l'autre"} ajoute, modifie ou supprime quelque chose</span>
+          <input
+            type="checkbox"
+            className="switch"
+            checked={me.notify_changes}
+            onChange={(e) => run(async () => void (await saveMe({ notify_changes: e.target.checked })))}
+          />
+        </label>
+      </section>
+
+      <section className="card">
+        <h2>Jours fériés et vacances scolaires</h2>
+        <p className="muted">Les jours fériés sont toujours affichés. Choisissez votre zone pour les vacances.</p>
+        <div className="segmented">
+          {ZONES.map((z) => (
+            <button key={z} className={z === zone ? 'on accent' : ''} onClick={() => onZone(z)}>
+              Zone {z}
+            </button>
+          ))}
+          <button className={zone === '' ? 'on accent' : ''} onClick={() => onZone('')}>
+            Aucune
+          </button>
+        </div>
+      </section>
+
+      <section className="card">
+        <h2>Sauvegarde</h2>
+        <p className="muted">Télécharge un fichier contenant tous vos rendez-vous et toutes vos tâches.</p>
+        <button className="secondary" onClick={() => exportData(data)}>
+          Exporter mes données
+        </button>
+      </section>
+
+      {message && <p className="notice">{message}</p>}
+
+      <button className="danger" onClick={onLogout}>
+        Se déconnecter
+      </button>
+    </div>
+  )
+}

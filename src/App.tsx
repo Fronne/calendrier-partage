@@ -1,0 +1,247 @@
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { nextDue } from '../shared/recurrence'
+import { BOTH, type CalEvent, type Occurrence, type Task } from '../shared/types'
+import { errorText, getToken, setToken } from './api'
+import BottomNav, { type Tab } from './components/BottomNav'
+import EventForm from './components/EventForm'
+import Login from './components/Login'
+import TaskForm from './components/TaskForm'
+import { fmtShortDay, todayKey } from './dates'
+import { dayInfoFor, getZone, saveZone, useSchoolHolidays } from './holidays'
+import { disablePush } from './push'
+import { StoreCtx, type Store } from './store'
+import { CACHE_KEY, QUEUE_KEY, useSync } from './useSync'
+import AgendaView from './views/AgendaView'
+import MonthView from './views/MonthView'
+import SearchView from './views/SearchView'
+import SettingsView from './views/SettingsView'
+import TasksView from './views/TasksView'
+import WeekView from './views/WeekView'
+
+type Editing =
+  | { kind: 'event'; event?: CalEvent; occ?: Occurrence; day: string; time?: string }
+  | { kind: 'task'; task?: Task }
+  | null
+
+type CalView = 'month' | 'week'
+
+const TITLES: Record<Tab, string> = { month: 'Calendrier', agenda: 'À venir', tasks: 'Tâches', settings: 'Réglages' }
+const VIEW_KEY = 'cal.view'
+const TOAST_MS = 6000
+
+export default function App() {
+  const [token, setTok] = useState(getToken)
+
+  const logout = useCallback(() => {
+    setToken(null)
+    localStorage.removeItem(CACHE_KEY)
+    localStorage.removeItem(QUEUE_KEY)
+    setTok(null)
+  }, [])
+
+  if (!token) {
+    return (
+      <Login
+        onDone={(t) => {
+          setToken(t)
+          setTok(t)
+        }}
+      />
+    )
+  }
+  return <Calendar onLogout={logout} />
+}
+
+function Calendar({ onLogout }: { onLogout: () => void }) {
+  const { data, offline, pending, mutate } = useSync(onLogout)
+  const [tab, setTab] = useState<Tab>('month')
+  const [calView, setCalView] = useState<CalView>(() => (localStorage.getItem(VIEW_KEY) === 'week' ? 'week' : 'month'))
+  const [filter, setFilter] = useState('all')
+  const [selectedDay, setSelectedDay] = useState(todayKey)
+  const [editing, setEditing] = useState<Editing>(null)
+  const [query, setQuery] = useState<string | null>(null)
+  const [toast, setToast] = useState<{ text: string; undo?: () => void } | null>(null)
+  const [zone, setZone] = useState(getZone)
+  const periods = useSchoolHolidays(zone)
+
+  useEffect(() => {
+    if (!toast) return
+    const timer = setTimeout(() => setToast(null), TOAST_MS)
+    return () => clearTimeout(timer)
+  }, [toast])
+
+  const me = data?.members.find((m) => m.id === data.me)
+
+  const store = useMemo<Store | null>(() => {
+    if (!data || !me) return null
+    const showToast = (text: string, undo?: () => void) => setToast({ text, undo })
+    const putTask = (task: Task, silent = false) =>
+      mutate({ method: 'PUT', path: `/tasks/${task.id}`, body: task, silent }).catch((e) => showToast(errorText(e)))
+    return {
+      me,
+      members: [me, ...data.members.filter((m) => m.id !== me.id)],
+      mutate,
+      toast: showToast,
+      dayInfo: dayInfoFor(periods),
+      openEvent: (occ) => setEditing({ kind: 'event', event: occ.event, occ, day: occ.day }),
+      openTask: (task) => setEditing({ kind: 'task', task }),
+      toggleTask: async (task) => {
+        // Une tâche répétée ne passe pas en « terminée » : elle repart à son échéance suivante
+        if (!task.done && task.rec_freq !== 'none' && task.due_date) {
+          const next = nextDue(task.due_date, task.rec_freq, task.rec_interval, todayKey())
+          await putTask({ ...task, due_date: next })
+          showToast(`Fait. Prochaine échéance : ${fmtShortDay(next)}`, () => putTask(task, true))
+        } else {
+          await putTask({ ...task, done: !task.done })
+        }
+      },
+    }
+  }, [data, me, mutate, periods])
+
+  if (!data || !store) return <div className="center">{offline ? 'Pas de connexion internet.' : 'Chargement…'}</div>
+
+  const shown = (owner: string) => filter === 'all' || owner === BOTH || owner === filter
+  const events = data.events.filter((e) => shown(e.owner))
+  const tasks = data.tasks.filter((t) => shown(t.owner))
+  const searching = query !== null
+  const close = () => setEditing(null)
+
+  const chooseView = (v: CalView) => {
+    localStorage.setItem(VIEW_KEY, v)
+    setCalView(v)
+  }
+  const chooseZone = (z: string) => {
+    saveZone(z)
+    setZone(z)
+  }
+
+  return (
+    <StoreCtx.Provider value={store}>
+      <div className="app">
+        <header className="topbar">
+          {searching ? (
+            <div className="search-bar">
+              <input type="search" placeholder="Rechercher…" value={query} onChange={(e) => setQuery(e.target.value)} autoFocus />
+              <button className="link" onClick={() => setQuery(null)}>
+                Fermer
+              </button>
+            </div>
+          ) : (
+            <div className="title-row">
+              <h1>{TITLES[tab]}</h1>
+              {tab === 'month' && (
+                <div className="segmented small">
+                  <button className={calView === 'month' ? 'on accent' : ''} onClick={() => chooseView('month')}>
+                    Mois
+                  </button>
+                  <button className={calView === 'week' ? 'on accent' : ''} onClick={() => chooseView('week')}>
+                    Semaine
+                  </button>
+                </div>
+              )}
+              {tab !== 'settings' && (
+                <button className="icon-btn" aria-label="Rechercher" onClick={() => setQuery('')}>
+                  <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+                    <circle cx="11" cy="11" r="7" />
+                    <path d="M20 20l-3.5-3.5" />
+                  </svg>
+                </button>
+              )}
+            </div>
+          )}
+          {tab !== 'settings' && !searching && (
+            <div className="chips">
+              <button className={filter === 'all' ? 'chip on' : 'chip'} onClick={() => setFilter('all')}>
+                Tous
+              </button>
+              {store.members.map((m) => (
+                <button key={m.id} className={filter === m.id ? 'chip on' : 'chip'} onClick={() => setFilter(m.id)}>
+                  <span className="dot" style={{ background: m.color }} />
+                  {m.name}
+                </button>
+              ))}
+            </div>
+          )}
+        </header>
+
+        {offline && (
+          <div className="banner">
+            Hors ligne.
+            {pending > 0
+              ? ` ${pending} modification${pending > 1 ? 's' : ''} en attente, envoyée${pending > 1 ? 's' : ''} dès le retour du réseau.`
+              : ' Vous pouvez continuer à saisir : tout sera envoyé au retour du réseau.'}
+          </div>
+        )}
+
+        <main className="content">
+          {searching ? (
+            <SearchView query={query} events={data.events} tasks={data.tasks} />
+          ) : (
+            <>
+              {tab === 'month' && calView === 'month' && <MonthView events={events} tasks={tasks} selectedDay={selectedDay} onSelectDay={setSelectedDay} />}
+              {tab === 'month' && calView === 'week' && (
+                <WeekView
+                  events={events}
+                  tasks={tasks}
+                  selectedDay={selectedDay}
+                  onSelectDay={setSelectedDay}
+                  onNewEvent={(day, time) => setEditing({ kind: 'event', day, time })}
+                />
+              )}
+              {tab === 'agenda' && <AgendaView events={events} tasks={tasks} />}
+              {tab === 'tasks' && <TasksView tasks={tasks} />}
+              {tab === 'settings' && (
+                <SettingsView
+                  data={data}
+                  zone={zone}
+                  onZone={chooseZone}
+                  onLogout={async () => {
+                    await disablePush().catch(() => {})
+                    onLogout()
+                  }}
+                />
+              )}
+            </>
+          )}
+        </main>
+
+        {tab !== 'settings' && !searching && (
+          <button
+            className="fab"
+            aria-label={tab === 'tasks' ? 'Nouvelle tâche' : 'Nouveau rendez-vous'}
+            onClick={() => setEditing(tab === 'tasks' ? { kind: 'task' } : { kind: 'event', day: tab === 'month' ? selectedDay : todayKey() })}
+          >
+            +
+          </button>
+        )}
+
+        {toast && (
+          <div className="toast" role="status">
+            <span>{toast.text}</span>
+            {toast.undo && (
+              <button
+                onClick={() => {
+                  toast.undo!()
+                  setToast(null)
+                }}
+              >
+                Annuler
+              </button>
+            )}
+          </div>
+        )}
+
+        <BottomNav
+          tab={tab}
+          onChange={(t) => {
+            setQuery(null)
+            setTab(t)
+          }}
+        />
+
+        {editing?.kind === 'event' && <EventForm event={editing.event} occ={editing.occ} day={editing.day} time={editing.time} onClose={close} />}
+        {editing?.kind === 'task' && <TaskForm task={editing.task} onClose={close} />}
+      </div>
+    </StoreCtx.Provider>
+  )
+}

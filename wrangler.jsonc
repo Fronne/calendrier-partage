@@ -1,0 +1,22 @@
+{
+  "name": "calendrier-partage",
+  "main": "worker/index.ts",
+  "compatibility_date": "2025-01-01",
+  "assets": { "directory": "./dist", "binding": "ASSETS" },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "calendrier",
+      "database_id": "a5d200dd-1959-44fc-a83a-86105ffc31c2",
+      "migrations_dir": "migrations"
+    }
+  ],
+  // Vérification des rappels chaque minute
+  "triggers": { "crons": ["* * * * *"] },
+  "vars": {
+    "TZ_NAME": "Europe/Paris",
+    // Identifie l'expéditeur des notifications auprès d'Apple/Google : l'adresse réelle de l'app
+    "VAPID_SUBJECT": "https://calendrier-partage.dofus-craft.workers.dev"
+  }
+  // Secrets (wrangler secret put / .dev.vars en local) : COUPLE_CODE, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY
+}
