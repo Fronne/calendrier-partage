@@ -215,7 +215,7 @@ export default function EventForm({ event, occ, day, time, onClose }: Props) {
       <input className="title-input" placeholder={birthday ? 'Prénom' : 'Titre'} value={title} onChange={(e) => setTitle(e.target.value)} maxLength={200} autoFocus={!event} />
 
       {birthday ? (
-        <>
+        <div className="group">
           <label className="row">
             <span>Date de naissance</span>
             <input type="date" value={startDay} onChange={(e) => e.target.value && setStartDay(e.target.value)} required />
@@ -224,9 +224,9 @@ export default function EventForm({ event, occ, day, time, onClose }: Props) {
             <span>Je connais l'année (pour afficher l'âge)</span>
             <input type="checkbox" className="switch" checked={yearKnown} onChange={(e) => setYearKnown(e.target.checked)} />
           </label>
-        </>
+        </div>
       ) : (
-        <>
+        <div className="group">
           <label className="row">
             <span>Toute la journée</span>
             <input type="checkbox" className="switch" checked={allDay} onChange={(e) => toggleAllDay(e.target.checked)} />
@@ -245,7 +245,7 @@ export default function EventForm({ event, occ, day, time, onClose }: Props) {
               {!allDay && <input type="time" value={endTime} onChange={(e) => e.target.value && setEndTime(e.target.value)} required />}
             </span>
           </div>
-        </>
+        </div>
       )}
 
       <div className="field">
@@ -273,6 +273,7 @@ export default function EventForm({ event, occ, day, time, onClose }: Props) {
         </div>
       )}
 
+      <div className="group">
       {!birthday && !one && (
         <label className="row">
           <span>Répéter</span>
@@ -293,18 +294,17 @@ export default function EventForm({ event, occ, day, time, onClose }: Props) {
       )}
 
       <ReminderPicker value={reminder} timed={!birthday && !allDay} onChange={setReminder} />
+      </div>
 
-      {!birthday && (
-        <>
-          <input placeholder="Lieu" value={location} onChange={(e) => setLocation(e.target.value)} maxLength={200} />
-          {location.trim() && (
-            <a className="link map-link" href={mapsUrl(location.trim())} target="_blank" rel="noreferrer">
-              📍 Voir sur la carte
-            </a>
-          )}
-        </>
-      )}
-      <textarea placeholder={birthday ? "Notes (idées de cadeau…)" : 'Notes'} value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} maxLength={2000} />
+      <div className="group">
+        {!birthday && <input placeholder="Lieu" aria-label="Lieu" value={location} onChange={(e) => setLocation(e.target.value)} maxLength={200} />}
+        {!birthday && location.trim() && (
+          <a className="link map-link" href={mapsUrl(location.trim())} target="_blank" rel="noreferrer">
+            📍 Voir sur la carte
+          </a>
+        )}
+        <textarea placeholder={birthday ? 'Notes (idées de cadeau…)' : 'Notes'} aria-label="Notes" value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} maxLength={2000} />
+      </div>
 
       {error && <p className="error">{error}</p>}
 

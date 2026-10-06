@@ -17,12 +17,13 @@ export default function Sheet({ title, busy, onClose, onSubmit, children }: Prop
   return (
     <div className="overlay" onClick={onClose}>
       <form className="sheet" onClick={(e) => e.stopPropagation()} onSubmit={submit}>
+        <span className="sheet-handle" aria-hidden="true" />
         <div className="sheet-head">
           <button type="button" className="link" onClick={onClose}>
             Annuler
           </button>
           <strong>{title}</strong>
-          <button type="submit" className="link strong" disabled={busy}>
+          <button type="submit" className="save" disabled={busy}>
             Enregistrer
           </button>
         </div>

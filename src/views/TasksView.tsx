@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { BOTH, type Task } from '../../shared/types'
 import { errorText } from '../api'
-import { TaskRow } from '../components/Items'
+import { Empty, TaskRow } from '../components/Items'
 import { uid } from '../ops'
 import { useStore } from '../store'
 
@@ -39,7 +39,7 @@ export default function TasksView({ tasks }: { tasks: Task[] }) {
         </button>
       </form>
 
-      {todo.length === 0 && <p className="empty">Aucune tâche à faire.</p>}
+      {todo.length === 0 && <Empty icon="✅">Aucune tâche à faire.</Empty>}
       <div className="items">
         {todo.map((t) => (
           <TaskRow key={t.id} task={t} showDue />

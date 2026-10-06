@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, type MouseEvent } from 'react'
 import { displayTitle, eventIcon, type CalEvent, type Occurrence, type Task } from '../../shared/types'
-import { colorOf } from '../colors'
-import { DayItems, DayNote } from '../components/Items'
+import { colorOf, tint } from '../colors'
+import { DayItems, DayNote, Empty } from '../components/Items'
 import { addDays, fmtLongDay, fmtRange, minutesOf, mondayOf, occurrencesByDay, todayKey } from '../dates'
 import { useStore } from '../store'
 
@@ -100,8 +100,8 @@ export default function WeekView({ events, tasks, selectedDay, onSelectDay, onNe
         <button aria-label="Semaine suivante" onClick={() => onSelectDay(addDays(selectedDay, 7))}>
           ›
         </button>
-        <button className="today-btn" onClick={() => onSelectDay(today)}>
-          Aujourd'hui
+        <button className="today-btn" aria-label="Revenir à aujourd'hui" onClick={() => onSelectDay(today)}>
+          {Number(today.slice(8))}
         </button>
       </div>
 
@@ -137,12 +137,12 @@ export default function WeekView({ events, tasks, selectedDay, onSelectDay, onNe
               <div key={col.day} className="week-stack">
                 {holiday && <span className="pill holiday-pill">{holiday}</span>}
                 {col.allDay.map((occ) => (
-                  <button key={occ.event.id} className="pill" style={{ background: colorOf(occ.event.owner, members) }} onClick={() => openEvent(occ)}>
+                  <button key={occ.event.id} className="pill" style={tint(colorOf(occ.event.owner, members))} onClick={() => openEvent(occ)}>
                     {label(occ)}
                   </button>
                 ))}
                 {col.tasks.map((t) => (
-                  <button key={t.id} className="pill task" style={{ borderColor: colorOf(t.owner, members), color: colorOf(t.owner, members) }} onClick={() => openTask(t)}>
+                  <button key={t.id} className="pill task" style={tint(colorOf(t.owner, members))} onClick={() => openTask(t)}>
                     {t.title}
                   </button>
                 ))}
@@ -175,7 +175,7 @@ export default function WeekView({ events, tasks, selectedDay, onSelectDay, onNe
                       left: `${b.lane * shift}%`,
                       width: `${100 - b.lane * shift}%`,
                       zIndex: b.lane + 1,
-                      background: colorOf(b.occ.event.owner, members),
+                      ...tint(colorOf(b.occ.event.owner, members)),
                     }}
                     onClick={() => openEvent(b.occ)}
                   >
@@ -192,7 +192,7 @@ export default function WeekView({ events, tasks, selectedDay, onSelectDay, onNe
       <h2 className="day-title">{fmtLongDay(selectedDay)}</h2>
       <DayNote day={selectedDay} />
       {dayOccs.length + dayTasks.length === 0 ? (
-        <p className="empty">Rien de prévu ce jour-là. Touchez un créneau vide pour ajouter un rendez-vous.</p>
+        <Empty icon="🌤️">Rien de prévu ce jour-là. Touchez un créneau vide pour ajouter un rendez-vous.</Empty>
       ) : (
         <DayItems day={selectedDay} occurrences={dayOccs} tasks={dayTasks} />
       )}

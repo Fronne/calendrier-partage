@@ -46,12 +46,17 @@ const shortDayFmt = formatter({ weekday: 'short', day: 'numeric', month: 'short'
 export const fmtMonth = (day: string) => capital(monthFmt.format(parseLocal(day)))
 export const fmtShortDay = (day: string) => shortDayFmt.format(parseLocal(day))
 
-const rangeFmt = formatter({ day: 'numeric', month: 'short', year: 'numeric' })
-/** « 5 – 11 oct. 2026 » */
-export const fmtRange = (from: string, to: string) => rangeFmt.formatRange(parseLocal(from), parseLocal(to))
+const rangeFmt = formatter({ day: 'numeric', month: 'short' })
+const rangeYearFmt = formatter({ day: 'numeric', month: 'short', year: 'numeric' })
+/** « 5–11 oct. », avec l'année seulement si ce n'est pas l'année en cours */
+export const fmtRange = (from: string, to: string) =>
+  (to.slice(0, 4) === todayKey().slice(0, 4) ? rangeFmt : rangeYearFmt).formatRange(parseLocal(from), parseLocal(to))
 
 const fullDayFmt = formatter({ weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
 export const fmtFullDay = (day: string) => fullDayFmt.format(parseLocal(day))
+
+/** « Mercredi 7 octobre », pour l'en-tête. */
+export const fmtToday = () => capital(longDayFmt.format(parseLocal(todayKey())))
 
 export function fmtLongDay(day: string): string {
   const today = todayKey()

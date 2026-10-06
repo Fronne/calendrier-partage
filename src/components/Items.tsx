@@ -1,5 +1,6 @@
+import type { ReactNode } from 'react'
 import { displayTitle, eventIcon, type Occurrence, type Task } from '../../shared/types'
-import { colorOf, nameOf } from '../colors'
+import { colorOf, nameOf, tint } from '../colors'
 import { fmtShortDay, occTimeLabel, todayKey } from '../dates'
 import { useStore } from '../store'
 
@@ -7,15 +8,12 @@ export function EventRow({ occ, day }: { occ: Occurrence; day: string }) {
   const { members, openEvent } = useStore()
   const ev = occ.event
   const icon = eventIcon(ev)
-  const color = colorOf(ev.owner, members)
   // « 14:00 – 15:00 » s'affiche sur deux lignes : début, puis fin
   const [from, to] = occTimeLabel(occ, day).split(' – ')
   return (
-    <button className="item" onClick={() => openEvent(occ)}>
+    <button className="item" style={tint(colorOf(ev.owner, members))} onClick={() => openEvent(occ)}>
       {/* Pastille à la couleur de la personne : l'icône de catégorie, ou un simple point */}
-      <span className="badge" style={{ background: `color-mix(in srgb, ${color} 22%, transparent)` }}>
-        {icon || <i style={{ background: color }} />}
-      </span>
+      <span className="badge">{icon || <i />}</span>
       <span className="time">
         <b>{from}</b>
         {to && <small>{to}</small>}
@@ -33,16 +31,10 @@ export function EventRow({ occ, day }: { occ: Occurrence; day: string }) {
 
 export function TaskRow({ task, showDue }: { task: Task; showDue?: boolean }) {
   const { members, openTask, toggleTask } = useStore()
-  const color = colorOf(task.owner, members)
   const late = !task.done && !!task.due_date && task.due_date < todayKey()
   return (
-    <div className={task.done ? 'item done' : 'item'}>
-      <button
-        className="check"
-        aria-label={task.done ? 'Marquer à faire' : 'Marquer comme fait'}
-        style={{ borderColor: color, background: task.done ? color : 'transparent' }}
-        onClick={() => toggleTask(task)}
-      >
+    <div className={task.done ? 'item done' : 'item'} style={tint(colorOf(task.owner, members))}>
+      <button className={task.done ? 'check on' : 'check'} aria-label={task.done ? 'Marquer à faire' : 'Marquer comme fait'} onClick={() => toggleTask(task)}>
         {task.done && '✓'}
       </button>
       <button className="grow plain" onClick={() => openTask(task)}>
@@ -84,4 +76,16 @@ export function DayNote({ day }: { day: string }) {
   const { holiday, vacation } = useStore().dayInfo(day)
   if (!holiday && !vacation) return null
   return <p className="day-note">{[holiday && `Férié : ${holiday}`, vacation].filter(Boolean).join(' · ')}</p>
+}
+
+/** Écran ou liste vide : une petite illustration et une phrase. */
+export function Empty({ icon, children }: { icon: string; children: ReactNode }) {
+  return (
+    <div className="empty">
+      <span className="empty-ico" aria-hidden="true">
+        {icon}
+      </span>
+      <p>{children}</p>
+    </div>
+  )
 }

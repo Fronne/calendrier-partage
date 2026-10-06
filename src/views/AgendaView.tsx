@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import type { CalEvent, Task } from '../../shared/types'
-import { DayItems, DayNote, TaskRow } from '../components/Items'
+import { DayItems, DayNote, Empty, TaskRow } from '../components/Items'
 import { addDays, fmtLongDay, occurrencesByDay, todayKey } from '../dates'
 
 interface Props {
@@ -38,7 +38,7 @@ export default function AgendaView({ events, tasks }: Props) {
   if (!days.length && !late.length) {
     return (
       <>
-        <p className="empty">Rien de prévu dans les {Math.round(daysAhead / 30)} prochains mois.</p>
+        <Empty icon="🗓️">Rien de prévu dans les {Math.round(daysAhead / 30)} prochains mois.</Empty>
         {further}
       </>
     )

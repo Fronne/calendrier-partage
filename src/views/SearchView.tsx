@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { expand } from '../../shared/recurrence'
 import { displayTitle, type CalEvent, type Task } from '../../shared/types'
-import { EventRow, TaskRow } from '../components/Items'
+import { Empty, EventRow, TaskRow } from '../components/Items'
 import { addDays, fmtFullDay, todayKey } from '../dates'
 
 interface Props {
@@ -36,8 +36,8 @@ export default function SearchView({ query, events, tasks }: Props) {
     }
   }, [q, events, tasks, today])
 
-  if (!results) return <p className="empty">Tapez au moins 2 lettres : titre, lieu ou note.</p>
-  if (!results.occurrences.length && !results.tasks.length) return <p className="empty">Aucun résultat pour « {query.trim()} ».</p>
+  if (!results) return <Empty icon="🔎">Tapez au moins 2 lettres : titre, lieu ou note.</Empty>
+  if (!results.occurrences.length && !results.tasks.length) return <Empty icon="🤷">Aucun résultat pour « {query.trim()} ».</Empty>
 
   return (
     <>

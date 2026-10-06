@@ -1,5 +1,5 @@
 import { BOTH, type Member } from '../../shared/types'
-import { BOTH_COLOR } from '../colors'
+import { BOTH_COLOR, tint } from '../colors'
 
 interface Props {
   value: string
@@ -12,7 +12,8 @@ export default function OwnerPicker({ value, members, onChange }: Props) {
   return (
     <div className="segmented">
       {options.map((o) => (
-        <button key={o.id} type="button" className={o.id === value ? 'on' : ''} style={o.id === value ? { background: o.color } : undefined} onClick={() => onChange(o.id)}>
+        // Le choix actif prend la couleur de la personne (voir .segmented dans styles.css)
+        <button key={o.id} type="button" className={o.id === value ? 'on' : ''} style={tint(o.color)} onClick={() => onChange(o.id)}>
           {o.label}
         </button>
       ))}

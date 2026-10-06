@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react'
 import { BOTH, type Member } from '../shared/types'
 
 /** Couleurs proposées à chaque personne. */
@@ -5,6 +6,9 @@ export const PALETTE = ['#2563eb', '#e11d48', '#059669', '#d97706', '#0891b2', '
 
 /** Couleur de ce qui concerne les deux. */
 export const BOTH_COLOR = '#7c3aed'
+
+/** Donne aux styles la couleur d'une personne (variable --c) : fond teinté, texte, bordure s'en déduisent. */
+export const tint = (color: string) => ({ '--c': color }) as CSSProperties
 
 export function colorOf(owner: string, members: Member[]): string {
   if (owner === BOTH) return BOTH_COLOR

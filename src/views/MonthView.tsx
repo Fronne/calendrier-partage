@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from 'react'
 import { displayTitle, eventIcon, type CalEvent, type Task } from '../../shared/types'
-import { colorOf } from '../colors'
-import { DayItems, DayNote } from '../components/Items'
+import { colorOf, tint } from '../colors'
+import { DayItems, DayNote, Empty } from '../components/Items'
 import { addMonths, fmtLongDay, fmtMonth, monthGrid, monthStart, occurrencesByDay, todayKey } from '../dates'
 import { useStore } from '../store'
 
@@ -53,8 +53,8 @@ export default function MonthView({ events, tasks, selectedDay, onSelectDay }: P
         <button aria-label="Mois suivant" onClick={() => go(1)}>
           ›
         </button>
-        <button className="today-btn" onClick={() => select(today)}>
-          Aujourd'hui
+        <button className="today-btn" aria-label="Revenir à aujourd'hui" onClick={() => select(today)}>
+          {Number(today.slice(8))}
         </button>
       </div>
 
@@ -99,7 +99,7 @@ export default function MonthView({ events, tasks, selectedDay, onSelectDay }: P
             <button key={day} className={cls} onClick={() => select(day)}>
               <span className="num">{Number(day.slice(8))}</span>
               {lines.slice(0, MAX_LINES).map((l) => (
-                <span key={l.key} className={l.task ? 'pill task' : 'pill'} style={l.task ? { borderColor: l.color, color: l.color } : { background: l.color }}>
+                <span key={l.key} className={l.task ? 'pill task' : 'pill'} style={tint(l.color)}>
                   {l.icon && <span className="ico">{l.icon}</span>}
                   {l.label}
                 </span>
@@ -113,7 +113,7 @@ export default function MonthView({ events, tasks, selectedDay, onSelectDay }: P
       <h2 className="day-title">{fmtLongDay(selectedDay)}</h2>
       <DayNote day={selectedDay} />
       {dayOccs.length + dayTasks.length === 0 ? (
-        <p className="empty">Rien de prévu ce jour-là.</p>
+        <Empty icon="🌤️">Rien de prévu ce jour-là.</Empty>
       ) : (
         <DayItems day={selectedDay} occurrences={dayOccs} tasks={dayTasks} />
       )}

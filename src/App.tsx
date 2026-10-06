@@ -6,7 +6,7 @@ import BottomNav, { type Tab } from './components/BottomNav'
 import EventForm from './components/EventForm'
 import Login from './components/Login'
 import TaskForm from './components/TaskForm'
-import { fmtShortDay, todayKey } from './dates'
+import { fmtShortDay, fmtToday, todayKey } from './dates'
 import { dayInfoFor, getZone, saveZone, useSchoolHolidays } from './holidays'
 import { disablePush } from './push'
 import { StoreCtx, type Store } from './store'
@@ -130,7 +130,10 @@ function Calendar({ onLogout }: { onLogout: () => void }) {
             </div>
           ) : (
             <div className="title-row">
-              <h1>{TITLES[tab]}</h1>
+              <div className="titles">
+                <span className="eyebrow">{fmtToday()}</span>
+                <h1>{TITLES[tab]}</h1>
+              </div>
               {tab === 'month' && (
                 <div className="segmented small">
                   <button className={calView === 'month' ? 'on accent' : ''} onClick={() => chooseView('month')}>

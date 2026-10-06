@@ -63,6 +63,7 @@ export default function TaskForm({ task, onClose }: Props) {
     <Sheet title={task ? 'Tâche' : 'Nouvelle tâche'} busy={busy} onClose={onClose} onSubmit={save}>
       <input className="title-input" placeholder="À faire…" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={200} autoFocus={!task} />
 
+      <div className="group">
       <label className="row">
         <span>Pour le (facultatif)</span>
         <input type="date" value={due} onChange={(e) => setDue(e.target.value)} />
@@ -81,6 +82,7 @@ export default function TaskForm({ task, onClose }: Props) {
       {repeat !== 'none' && <p className="hint">Une fois cochée, la tâche revient à son échéance suivante.</p>}
 
       <ReminderPicker value={reminder} timed={false} onChange={setReminder} />
+      </div>
 
       <div className="field">
         <span className="label">Pour qui</span>
