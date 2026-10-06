@@ -43,18 +43,23 @@ export default function MonthView({ events, tasks, selectedDay, onSelectDay }: P
   return (
     <>
       <div className="month-head">
+        <label className="pick" aria-label="Choisir un mois">
+          <strong>
+            {fmtMonth(month)}
+            <span className="caret">▾</span>
+          </strong>
+          <input type="month" value={month.slice(0, 7)} onChange={(e) => e.target.value && select(e.target.value + '-01')} />
+        </label>
+        {(selectedDay !== today || month !== monthStart(today)) && (
+          <button className="today-btn" onClick={() => select(today)}>
+            Aujourd'hui
+          </button>
+        )}
         <button aria-label="Mois précédent" onClick={() => go(-1)}>
           ‹
         </button>
-        <label className="pick" aria-label="Choisir un mois">
-          <strong>{fmtMonth(month)} ▾</strong>
-          <input type="month" value={month.slice(0, 7)} onChange={(e) => e.target.value && select(e.target.value + '-01')} />
-        </label>
         <button aria-label="Mois suivant" onClick={() => go(1)}>
           ›
-        </button>
-        <button className="today-btn" aria-label="Revenir à aujourd'hui" onClick={() => select(today)}>
-          {Number(today.slice(8))}
         </button>
       </div>
 

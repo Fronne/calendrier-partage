@@ -39,11 +39,15 @@ export const minutesOf = (local: string) => Number(local.slice(11, 13)) * 60 + N
 const formatter = (opts: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat('fr-FR', { ...opts, timeZone: 'UTC' })
 const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 
-const monthFmt = formatter({ month: 'long', year: 'numeric' })
+// Mois abrégé quand l'année est affichée, pour que le titre tienne à côté du bouton « Aujourd'hui »
+const monthFmt = formatter({ month: 'short', year: 'numeric' })
 const longDayFmt = formatter({ weekday: 'long', day: 'numeric', month: 'long' })
 const shortDayFmt = formatter({ weekday: 'short', day: 'numeric', month: 'short' })
 
-export const fmtMonth = (day: string) => capital(monthFmt.format(parseLocal(day)))
+const monthOnlyFmt = formatter({ month: 'long' })
+/** « Octobre », ou « Janv. 2027 » si ce n'est pas l'année en cours */
+export const fmtMonth = (day: string) =>
+  capital((day.slice(0, 4) === todayKey().slice(0, 4) ? monthOnlyFmt : monthFmt).format(parseLocal(day)))
 export const fmtShortDay = (day: string) => shortDayFmt.format(parseLocal(day))
 
 const rangeFmt = formatter({ day: 'numeric', month: 'short' })

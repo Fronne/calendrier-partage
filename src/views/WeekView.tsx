@@ -90,18 +90,23 @@ export default function WeekView({ events, tasks, selectedDay, onSelectDay, onNe
   return (
     <>
       <div className="month-head">
+        <label className="pick" aria-label="Choisir une date">
+          <strong>
+            {fmtRange(days[0], days[6])}
+            <span className="caret">▾</span>
+          </strong>
+          <input type="date" value={selectedDay} onChange={(e) => e.target.value && onSelectDay(e.target.value)} />
+        </label>
+        {selectedDay !== today && (
+          <button className="today-btn" onClick={() => onSelectDay(today)}>
+            Aujourd'hui
+          </button>
+        )}
         <button aria-label="Semaine précédente" onClick={() => onSelectDay(addDays(selectedDay, -7))}>
           ‹
         </button>
-        <label className="pick" aria-label="Choisir une date">
-          <strong>{fmtRange(days[0], days[6])} ▾</strong>
-          <input type="date" value={selectedDay} onChange={(e) => e.target.value && onSelectDay(e.target.value)} />
-        </label>
         <button aria-label="Semaine suivante" onClick={() => onSelectDay(addDays(selectedDay, 7))}>
           ›
-        </button>
-        <button className="today-btn" aria-label="Revenir à aujourd'hui" onClick={() => onSelectDay(today)}>
-          {Number(today.slice(8))}
         </button>
       </div>
 
