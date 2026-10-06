@@ -9,7 +9,7 @@ import { useStore } from '../store'
 import { getTheme, setTheme, type Theme } from '../theme'
 
 const THEMES: { id: Theme; label: string }[] = [
-  { id: 'auto', label: 'Automatique' },
+  { id: 'auto', label: 'Auto' },
   { id: 'light', label: 'Clair' },
   { id: 'dark', label: 'Sombre' },
 ]

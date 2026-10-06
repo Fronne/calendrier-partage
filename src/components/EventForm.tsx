@@ -183,7 +183,7 @@ export default function EventForm({ event, occ, day, time, onClose }: Props) {
     )
   }
 
-  const heading = birthday ? 'Anniversaire' : event ? 'Rendez-vous' : 'Nouveau rendez-vous'
+  const heading = birthday ? 'Anniversaire' : event ? 'Rendez-vous' : 'Ajouter'
 
   return (
     <Sheet title={heading} busy={busy} onClose={onClose} onSubmit={save}>
@@ -203,7 +203,7 @@ export default function EventForm({ event, occ, day, time, onClose }: Props) {
           <span className="label">Rendez-vous répété : modifier ou supprimer…</span>
           <div className="segmented">
             <button type="button" className={one ? 'on accent' : ''} onClick={() => changeScope('one')}>
-              Cette date seulement
+              Cette date
             </button>
             <button type="button" className={!one ? 'on accent' : ''} onClick={() => changeScope('series')}>
               Toute la série

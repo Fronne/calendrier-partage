@@ -418,7 +418,7 @@ p {
 }
 
 .week-scroll {
-  height: max(280px, calc(100dvh - 370px - env(safe-area-inset-top) - env(safe-area-inset-bottom)));
+  height: max(260px, calc(100dvh - 440px - env(safe-area-inset-top) - env(safe-area-inset-bottom)));
   overflow-y: auto;
 }
 
@@ -455,6 +455,7 @@ p {
   padding: 1px 2px;
   border-radius: 4px;
   border: 1px solid var(--card);
+  box-shadow: -2px 0 0 var(--card);
   color: #fff;
   font-size: 10px;
   line-height: 12px;
@@ -662,10 +663,22 @@ p {
   }
 }
 
+.sheet-head strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sheet-head button {
+  flex: none;
+}
+
 .sheet-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
   padding: 6px 14px;
   border-bottom: 1px solid var(--line);
 }
@@ -721,9 +734,12 @@ p {
 }
 
 .segmented button {
-  flex: 1;
+  /* Largeur selon le texte : un prénom long prend la place qu'un libellé court n'utilise pas */
+  flex: 1 1 auto;
+  min-width: 0;
   min-height: 44px;
   padding: 0 6px;
+  font-size: 15px;
   border-radius: 10px;
   border: 1px solid var(--line);
   background: var(--card);
@@ -740,6 +756,8 @@ p {
 
 .switch {
   appearance: none;
+  /* Ne rétrécit jamais à côté d'un long libellé : sinon le rond sort de l'interrupteur une fois activé */
+  flex: none;
   width: 50px;
   height: 30px;
   border-radius: 999px;
@@ -1066,4 +1084,56 @@ p {
   height: 100%;
   padding: 0;
   opacity: 0;
+}
+
+/* ---------- Petits écrans et libellés longs ---------- */
+
+/* Si les choix ne tiennent pas sur une ligne (prénoms longs, petit écran), ils passent à la ligne au lieu d'être tronqués */
+.segmented {
+  flex-wrap: wrap;
+}
+
+.segmented.small {
+  flex-wrap: nowrap;
+}
+
+.title-row h1 {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.inputs input {
+  min-width: 0;
+}
+
+@media (max-width: 350px) {
+  .topbar h1 {
+    font-size: 20px;
+  }
+
+  .segmented.small button {
+    padding: 0 8px;
+    font-size: 13px;
+  }
+
+  .icon-btn {
+    width: 34px;
+  }
+
+  /* Date et heure sous leur libellé : côte à côte, elles dépassaient du formulaire */
+  .row:has(.inputs) {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+  }
+
+  .inputs input {
+    flex: 1;
+  }
+}
+
+/* Les lignes d'un formulaire gardent leur hauteur : c'est le formulaire qui défile, pas elles qui se tassent */
+.sheet-body > * {
+  flex-shrink: 0;
 }

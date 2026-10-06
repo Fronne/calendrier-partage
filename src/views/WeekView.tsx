@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, type MouseEvent } from 'react'
 import { displayTitle, eventIcon, type CalEvent, type Occurrence, type Task } from '../../shared/types'
 import { colorOf } from '../colors'
-import { addDays, fmtRange, minutesOf, mondayOf, occurrencesByDay, todayKey } from '../dates'
+import { DayItems, DayNote } from '../components/Items'
+import { addDays, fmtLongDay, fmtRange, minutesOf, mondayOf, occurrencesByDay, todayKey } from '../dates'
 import { useStore } from '../store'
 
 interface Props {
@@ -19,6 +20,10 @@ const HOUR_H = 44
 const FIRST_HOUR = 7
 const MIN_BLOCK_MIN = 30
 const SWIPE_PX = 60
+/** Décalage maximal entre deux rendez-vous simultanés, en % de la largeur du jour. */
+const MAX_LANE_SHIFT = 26
+/** Part du jour que le dernier rendez-vous d'une cascade garde toujours. */
+const MIN_BLOCK_WIDTH = 45
 
 interface Block {
   occ: Occurrence
@@ -56,10 +61,14 @@ export default function WeekView({ events, tasks, selectedDay, onSelectDay, onNe
   const monday = mondayOf(selectedDay)
 
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(monday, i)), [monday])
-  const columns = useMemo(() => {
+  const { columns, byDay } = useMemo(() => {
     const byDay = occurrencesByDay(events, days[0], days[6])
-    return days.map((day) => ({ day, ...layout(byDay.get(day) ?? [], day), tasks: tasks.filter((t) => t.due_date === day && !t.done) }))
+    const columns = days.map((day) => ({ day, ...layout(byDay.get(day) ?? [], day), tasks: tasks.filter((t) => t.due_date === day && !t.done) }))
+    return { columns, byDay }
   }, [events, tasks, days])
+
+  const dayOccs = byDay.get(selectedDay) ?? []
+  const dayTasks = tasks.filter((t) => t.due_date === selectedDay)
 
   useEffect(() => {
     if (scroller.current) scroller.current.scrollTop = FIRST_HOUR * HOUR_H
@@ -151,7 +160,10 @@ export default function WeekView({ events, tasks, selectedDay, onSelectDay, onNe
                 </span>
               ))}
             </div>
-            {columns.map((col) => (
+            {columns.map((col) => {
+              // Chaque rendez-vous simultané est décalé vers la droite et passe au-dessus du précédent
+              const shift = col.lanes > 1 ? Math.min(MAX_LANE_SHIFT, (100 - MIN_BLOCK_WIDTH) / (col.lanes - 1)) : 0
+              return (
               <div key={col.day} className={col.day === today ? 'week-col today' : 'week-col'} onClick={(e) => tapEmpty(e, col.day)}>
                 {col.blocks.map((b) => (
                   <button
@@ -160,8 +172,9 @@ export default function WeekView({ events, tasks, selectedDay, onSelectDay, onNe
                     style={{
                       top: (b.from / 60) * HOUR_H,
                       height: ((b.to - b.from) / 60) * HOUR_H - 1,
-                      left: `${(b.lane / col.lanes) * 100}%`,
-                      width: `${100 / col.lanes}%`,
+                      left: `${b.lane * shift}%`,
+                      width: `${100 - b.lane * shift}%`,
+                      zIndex: b.lane + 1,
                       background: colorOf(b.occ.event.owner, members),
                     }}
                     onClick={() => openEvent(b.occ)}
@@ -170,11 +183,19 @@ export default function WeekView({ events, tasks, selectedDay, onSelectDay, onNe
                   </button>
                 ))}
               </div>
-            ))}
+              )
+            })}
           </div>
         </div>
       </div>
-      <p className="hint center-text">Touchez un créneau vide pour ajouter un rendez-vous.</p>
+
+      <h2 className="day-title">{fmtLongDay(selectedDay)}</h2>
+      <DayNote day={selectedDay} />
+      {dayOccs.length + dayTasks.length === 0 ? (
+        <p className="empty">Rien de prévu ce jour-là. Touchez un créneau vide pour ajouter un rendez-vous.</p>
+      ) : (
+        <DayItems day={selectedDay} occurrences={dayOccs} tasks={dayTasks} />
+      )}
     </>
   )
 }
