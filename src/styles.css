@@ -964,22 +964,6 @@ p {
   font-size: 14px;
 }
 
-.invite {
-  margin: 0 16px 12px;
-  padding: 14px;
-  border-radius: 14px;
-  background: var(--card);
-  border: 1px solid var(--accent);
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.invite p {
-  font-size: 14px;
-  color: var(--muted);
-}
-
 .fold {
   display: block;
   margin: 18px 4px 8px;

@@ -52,27 +52,6 @@ export default function App() {
   return <Calendar onLogout={logout} />
 }
 
-/** Affichée tant que la deuxième personne n'a pas créé son profil. */
-function InviteCard() {
-  const [copied, setCopied] = useState(false)
-  const share = async () => {
-    const url = window.location.origin
-    // Le code de couple ne voyage pas avec le lien : il se donne de vive voix
-    if (navigator.share) return navigator.share({ title: 'Calendrier partagé', url }).catch(() => {})
-    await navigator.clipboard.writeText(url).catch(() => {})
-    setCopied(true)
-  }
-  return (
-    <div className="invite">
-      <strong>Vous êtes seul pour l'instant</strong>
-      <p>Envoyez l'adresse de l'application à votre moitié, puis donnez-lui votre code de couple de vive voix.</p>
-      <button className="secondary" onClick={share}>
-        {copied ? 'Adresse copiée' : "Partager l'adresse"}
-      </button>
-    </div>
-  )
-}
-
 function Calendar({ onLogout }: { onLogout: () => void }) {
   const { data, offline, pending, mutate, refresh } = useSync(onLogout)
   const [tab, setTab] = useState<Tab>('month')
@@ -195,8 +174,6 @@ function Calendar({ onLogout }: { onLogout: () => void }) {
               : ' Vous pouvez continuer à saisir : tout sera envoyé au retour du réseau.'}
           </div>
         )}
-
-        {data.members.length === 1 && !searching && tab !== 'settings' && <InviteCard />}
 
         <main className="content">
           {searching ? (
