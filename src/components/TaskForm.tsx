@@ -3,8 +3,9 @@ import { BOTH, type Task } from '../../shared/types'
 import { errorText } from '../api'
 import { uid } from '../ops'
 import { useStore } from '../store'
-import { REMINDERS_ALL_DAY, repeatKey, REPEATS } from './EventForm'
+import { repeatKey, REPEATS } from './EventForm'
 import OwnerPicker from './OwnerPicker'
+import ReminderPicker, { NO_REMINDER, reminderFrom, type Reminder } from './ReminderPicker'
 import Sheet from './Sheet'
 
 interface Props {
@@ -18,7 +19,7 @@ export default function TaskForm({ task, onClose }: Props) {
   const [due, setDue] = useState(task?.due_date ?? '')
   const [owner, setOwner] = useState(task?.owner ?? BOTH)
   const [repeat, setRepeat] = useState(task ? repeatKey(task.rec_freq, task.rec_interval) : 'none')
-  const [reminder, setReminder] = useState(task?.reminder_minutes == null ? '' : String(task.reminder_minutes))
+  const [reminder, setReminder] = useState<Reminder>(() => (task ? reminderFrom(task, null) : NO_REMINDER))
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
 
@@ -37,7 +38,7 @@ export default function TaskForm({ task, onClose }: Props) {
 
   const save = () => {
     if (!title.trim()) return setError('Décrivez la tâche.')
-    if (!due && (repeat !== 'none' || reminder !== '')) return setError('Choisissez une date pour répéter la tâche ou recevoir un rappel.')
+    if (!due && (repeat !== 'none' || reminder.minutes != null)) return setError('Choisissez une date pour répéter la tâche ou recevoir un rappel.')
     const rep = REPEATS.find((r) => r.key === repeat) ?? REPEATS[0]
     const body = {
       title: title.trim(),
@@ -46,7 +47,8 @@ export default function TaskForm({ task, onClose }: Props) {
       done: task?.done ?? false,
       rec_freq: rep.freq,
       rec_interval: rep.interval,
-      reminder_minutes: reminder === '' ? null : Number(reminder),
+      reminder_minutes: reminder.minutes,
+      reminder_time: reminder.time,
     }
     run(() => (task ? mutate({ method: 'PUT', path: `/tasks/${task.id}`, body }) : mutate({ method: 'POST', path: '/tasks', body: { ...body, id: uid() } })))
   }
@@ -78,16 +80,7 @@ export default function TaskForm({ task, onClose }: Props) {
       </label>
       {repeat !== 'none' && <p className="hint">Une fois cochée, la tâche revient à son échéance suivante.</p>}
 
-      <label className="row">
-        <span>Rappel</span>
-        <select value={reminder} onChange={(e) => setReminder(e.target.value)}>
-          {REMINDERS_ALL_DAY.map((r) => (
-            <option key={r.value} value={r.value}>
-              {r.label}
-            </option>
-          ))}
-        </select>
-      </label>
+      <ReminderPicker value={reminder} timed={false} onChange={setReminder} />
 
       <div className="field">
         <span className="label">Pour qui</span>

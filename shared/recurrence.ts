@@ -92,10 +92,18 @@ export function nextDue(due: string, freq: Freq, interval: number, today: string
   return due
 }
 
-/** Moment (heure locale) à partir duquel se compte le délai de rappel. */
-export function reminderBase(occ: Occurrence): Date {
+/** Moment (heure locale) où part le rappel d'une occurrence. */
+export function reminderAt(occ: Occurrence): Date {
+  const ev = occ.event
+  const minutes = ev.reminder_minutes ?? 0
+  // Heure choisie : N jours avant le jour de début, à cette heure
+  if (ev.reminder_time) {
+    const day = new Date(parseLocal(occ.day).getTime() - Math.round(minutes / 1440) * DAY)
+    return parseLocal(`${fmtDay(day)}T${ev.reminder_time}`)
+  }
   const s = parseLocal(occ.start)
-  return occ.event.all_day ? new Date(s.getTime() + ALL_DAY_REMINDER_HOUR * 3_600_000) : s
+  const base = ev.all_day ? s.getTime() + ALL_DAY_REMINDER_HOUR * 3_600_000 : s.getTime()
+  return new Date(base - minutes * 60_000)
 }
 
 /** Occurrences dont le rappel tombe dans l'intervalle ]after, upTo] (heures locales). */
@@ -104,10 +112,11 @@ export function dueReminders(events: CalEvent[], after: Date, upTo: Date): Occur
   for (const ev of events) {
     if (ev.reminder_minutes == null) continue
     const rem = ev.reminder_minutes * 60_000
-    const fromDay = fmtDay(new Date(after.getTime() + rem))
-    const toDay = fmtDay(new Date(upTo.getTime() + rem))
+    // Un jour de marge de chaque côté : avec une heure choisie, le rappel peut partir avant ou après l'heure du début
+    const fromDay = fmtDay(new Date(after.getTime() + rem - DAY))
+    const toDay = fmtDay(new Date(upTo.getTime() + rem + DAY))
     for (const occ of expand(ev, fromDay, toDay)) {
-      const t = reminderBase(occ).getTime() - rem
+      const t = reminderAt(occ).getTime()
       if (t > after.getTime() && t <= upTo.getTime()) out.push(occ)
     }
   }

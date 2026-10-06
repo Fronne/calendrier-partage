@@ -27,10 +27,11 @@ function message(occ: Occurrence) {
   const ev = occ.event
   const min = ev.reminder_minutes ?? 0
   let when: string
-  if (ev.all_day) {
-    const days = Math.round(min / 1440)
-    when = days === 0 ? "Aujourd'hui" : days === 1 ? 'Demain' : `Dans ${days} jours`
-  } else if (min === 0) when = `Maintenant · ${occ.start.slice(11)}`
+  const days = Math.round(min / 1440)
+  const dayWord = days === 0 ? "Aujourd'hui" : days === 1 ? 'Demain' : `Dans ${days} jours`
+  if (ev.all_day) when = dayWord
+  else if (ev.reminder_time) when = `${dayWord} à ${occ.start.slice(11)}`
+  else if (min === 0) when = `Maintenant · ${occ.start.slice(11)}`
   else if (min >= 1440) when = `Demain à ${occ.start.slice(11)}`
   else when = `À ${occ.start.slice(11)}`
   return {
@@ -56,6 +57,7 @@ function taskAsEvent(t: Task): CalEvent {
     rec_until: null,
     exdates: [],
     reminder_minutes: t.reminder_minutes,
+    reminder_time: t.reminder_time,
     category: '',
     kind: 'event',
     birth_year: null,

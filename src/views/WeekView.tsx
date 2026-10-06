@@ -71,7 +71,12 @@ export default function WeekView({ events, tasks, selectedDay, onSelectDay, onNe
     onNewEvent(day, `${String(hour).padStart(2, '0')}:00`)
   }
 
-  const label = (occ: Occurrence) => `${eventIcon(occ.event)} ${displayTitle(occ.event)}`.trim()
+  const label = (occ: Occurrence) => (
+    <>
+      {eventIcon(occ.event) && <span className="ico">{eventIcon(occ.event)}</span>}
+      {displayTitle(occ.event)}
+    </>
+  )
 
   return (
     <>

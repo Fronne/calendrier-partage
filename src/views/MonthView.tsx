@@ -78,11 +78,12 @@ export default function MonthView({ events, tasks, selectedDay, onSelectDay }: P
           const lines = [
             ...(byDay.get(day) ?? []).map((o) => ({
               key: o.event.id,
-              label: `${eventIcon(o.event)} ${displayTitle(o.event)}`.trim(),
+              icon: eventIcon(o.event),
+              label: displayTitle(o.event),
               color: colorOf(o.event.owner, members),
               task: false,
             })),
-            ...(tasksByDay.get(day) ?? []).filter((t) => !t.done).map((t) => ({ key: t.id, label: t.title, color: colorOf(t.owner, members), task: true })),
+            ...(tasksByDay.get(day) ?? []).filter((t) => !t.done).map((t) => ({ key: t.id, icon: '', label: t.title, color: colorOf(t.owner, members), task: true })),
           ]
           const cls = [
             'cell',
@@ -99,6 +100,7 @@ export default function MonthView({ events, tasks, selectedDay, onSelectDay }: P
               <span className="num">{Number(day.slice(8))}</span>
               {lines.slice(0, MAX_LINES).map((l) => (
                 <span key={l.key} className={l.task ? 'pill task' : 'pill'} style={l.task ? { borderColor: l.color, color: l.color } : { background: l.color }}>
+                  {l.icon && <span className="ico">{l.icon}</span>}
                   {l.label}
                 </span>
               ))}

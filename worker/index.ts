@@ -14,6 +14,7 @@ const LOGIN_WINDOW_MS = 15 * 60_000
 const DATE = /^\d{4}-\d{2}-\d{2}$/
 const DATETIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/
 const COLOR = /^#[0-9a-fA-F]{6}$/
+const TIME = /^([01]\d|2[0-3]):[0-5]\d$/
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 
 class HttpError extends Error {
@@ -153,11 +154,13 @@ function cleanRepeat(b: any, allowed: boolean) {
   return { rec_freq, rec_interval: Math.min(99, Math.max(1, Math.round(Number(b.rec_interval)) || 1)) }
 }
 
-function cleanReminder(v: unknown): number | null {
-  if (v == null) return null
-  const minutes = Math.round(Number(v))
+function cleanReminder(b: any): { reminder_minutes: number | null; reminder_time: string | null } {
+  if (b.reminder_minutes == null) return { reminder_minutes: null, reminder_time: null }
+  const minutes = Math.round(Number(b.reminder_minutes))
   if (!(minutes >= 0 && minutes <= 40320)) throw bad('Rappel invalide.')
-  return minutes
+  // Avec une heure choisie, le délai se compte en jours entiers
+  if (TIME.test(b.reminder_time)) return { reminder_minutes: Math.round(minutes / 1440) * 1440, reminder_time: b.reminder_time }
+  return { reminder_minutes: minutes, reminder_time: null }
 }
 
 async function cleanEvent(env: Env, b: any, members?: Member[]) {
@@ -180,7 +183,7 @@ async function cleanEvent(env: Env, b: any, members?: Member[]) {
     ...repeat,
     rec_until: !birthday && repeat.rec_freq !== 'none' && DATE.test(b.rec_until) ? (b.rec_until as string) : null,
     exdates: JSON.stringify(Array.isArray(b.exdates) ? b.exdates.filter((d: unknown) => typeof d === 'string' && DATE.test(d)).slice(0, 500) : []),
-    reminder_minutes: cleanReminder(b.reminder_minutes),
+    ...cleanReminder(b),
     category: CATEGORIES.some((cat) => cat.id === b.category) ? (b.category as string) : '',
     kind: birthday ? 'birthday' : 'event',
     birth_year: birthday && birthYear >= 1900 && birthYear <= 2100 ? birthYear : null,
@@ -192,10 +195,10 @@ type CleanEvent = Awaited<ReturnType<typeof cleanEvent>>
 function insertEvent(env: Env, id: string, e: CleanEvent) {
   return env.DB.prepare(
     `INSERT OR IGNORE INTO events (id, title, start_local, end_local, all_day, location, notes, owner, rec_freq,
-       rec_interval, rec_until, exdates, reminder_minutes, category, kind, birth_year, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       rec_interval, rec_until, exdates, reminder_minutes, reminder_time, category, kind, birth_year, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   ).bind(id, e.title, e.start_local, e.end_local, e.all_day, e.location, e.notes, e.owner, e.rec_freq,
-    e.rec_interval, e.rec_until, e.exdates, e.reminder_minutes, e.category, e.kind, e.birth_year, now())
+    e.rec_interval, e.rec_until, e.exdates, e.reminder_minutes, e.reminder_time, e.category, e.kind, e.birth_year, now())
 }
 
 const asEvent = (e: CleanEvent) => rowToEvent(e) as CalEvent
@@ -219,12 +222,12 @@ app.put('/api/events/:id', async (c) => {
   // Les occurrences supprimées n'ont plus de sens si la série a été déplacée
   const res = await c.env.DB.prepare(
     `UPDATE events SET title = ?, end_local = ?, all_day = ?, location = ?, notes = ?, owner = ?,
-       rec_freq = ?, rec_interval = ?, rec_until = ?, reminder_minutes = ?, category = ?, kind = ?, birth_year = ?,
+       rec_freq = ?, rec_interval = ?, rec_until = ?, reminder_minutes = ?, reminder_time = ?, category = ?, kind = ?, birth_year = ?,
        updated_at = ?, exdates = CASE WHEN start_local = ? THEN exdates ELSE '[]' END, start_local = ?
      WHERE id = ?`,
   )
     .bind(e.title, e.end_local, e.all_day, e.location, e.notes, e.owner, e.rec_freq, e.rec_interval, e.rec_until,
-      e.reminder_minutes, e.category, e.kind, e.birth_year, now(), e.start_local, e.start_local, c.req.param('id'))
+      e.reminder_minutes, e.reminder_time, e.category, e.kind, e.birth_year, now(), e.start_local, e.start_local, c.req.param('id'))
     .run()
   if (!res.meta.changes) throw new HttpError(404, "Ce rendez-vous n'existe plus.")
   notifyOther(c, e.kind === 'birthday' ? 'a modifié un anniversaire' : 'a modifié un rendez-vous', describe(asEvent(e)))
@@ -294,7 +297,7 @@ async function cleanTask(env: Env, b: any, members?: Member[]) {
     done_at: done ? now() : null,
     // Répétition et rappel n'ont de sens qu'avec une échéance
     ...cleanRepeat(b, !!due_date),
-    reminder_minutes: due_date ? cleanReminder(b.reminder_minutes) : null,
+    ...cleanReminder(due_date ? b : {}),
   }
 }
 
@@ -302,9 +305,9 @@ type CleanTask = Awaited<ReturnType<typeof cleanTask>>
 
 function insertTask(env: Env, id: string, t: CleanTask) {
   return env.DB.prepare(
-    `INSERT OR IGNORE INTO tasks (id, title, due_date, owner, done, done_at, rec_freq, rec_interval, reminder_minutes, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-  ).bind(id, t.title, t.due_date, t.owner, t.done, t.done_at, t.rec_freq, t.rec_interval, t.reminder_minutes, now())
+    `INSERT OR IGNORE INTO tasks (id, title, due_date, owner, done, done_at, rec_freq, rec_interval, reminder_minutes, reminder_time, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  ).bind(id, t.title, t.due_date, t.owner, t.done, t.done_at, t.rec_freq, t.rec_interval, t.reminder_minutes, t.reminder_time, now())
 }
 
 app.post('/api/tasks', async (c) => {
@@ -320,9 +323,9 @@ app.put('/api/tasks/:id', async (c) => {
   const t = await cleanTask(c.env, await c.req.json())
   const res = await c.env.DB.prepare(
     `UPDATE tasks SET title = ?, due_date = ?, owner = ?, done = ?, done_at = ?, rec_freq = ?, rec_interval = ?,
-       reminder_minutes = ?, updated_at = ? WHERE id = ?`,
+       reminder_minutes = ?, reminder_time = ?, updated_at = ? WHERE id = ?`,
   )
-    .bind(t.title, t.due_date, t.owner, t.done, t.done_at, t.rec_freq, t.rec_interval, t.reminder_minutes, now(), c.req.param('id'))
+    .bind(t.title, t.due_date, t.owner, t.done, t.done_at, t.rec_freq, t.rec_interval, t.reminder_minutes, t.reminder_time, now(), c.req.param('id'))
     .run()
   if (!res.meta.changes) throw new HttpError(404, "Cette tâche n'existe plus.")
   return c.json({ ok: true })

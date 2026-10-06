@@ -7,6 +7,7 @@ import { uid } from '../ops'
 import { isIos } from '../push'
 import { useStore } from '../store'
 import OwnerPicker from './OwnerPicker'
+import ReminderPicker, { forAllDay, reminderFrom, type Reminder } from './ReminderPicker'
 import Sheet from './Sheet'
 
 interface Props {
@@ -30,23 +31,9 @@ export const REPEATS: { key: string; label: string; freq: Freq; interval: number
 
 export const repeatKey = (freq: Freq, interval: number) => REPEATS.find((r) => r.freq === freq && r.interval === interval)?.key ?? freq
 
-const REMINDERS_TIMED = [
-  { value: '', label: 'Aucun' },
-  { value: '0', label: "À l'heure du rendez-vous" },
-  { value: '10', label: '10 minutes avant' },
-  { value: '30', label: '30 minutes avant' },
-  { value: '60', label: '1 heure avant' },
-  { value: '1440', label: 'La veille à la même heure' },
-]
-
-// Un événement "journée" est rappelé à 9 h (voir reminderBase côté serveur)
-export const REMINDERS_ALL_DAY = [
-  { value: '', label: 'Aucun' },
-  { value: '0', label: 'Le jour même à 9 h' },
-  { value: '1440', label: 'La veille à 9 h' },
-]
-
-const REMINDERS_BIRTHDAY = [...REMINDERS_ALL_DAY, { value: '4320', label: '3 jours avant' }, { value: '10080', label: '1 semaine avant' }]
+const DEFAULT_REMINDER: Reminder = { minutes: 30, time: null }
+// Un anniversaire se prépare : par défaut on prévient quelques jours avant
+const DEFAULT_BIRTHDAY_REMINDER: Reminder = { minutes: 3 * 1440, time: '18:00' }
 
 /** Chevauchements signalés au maximum dans le formulaire. */
 const MAX_CLASHES = 3
@@ -83,7 +70,7 @@ export default function EventForm({ event, occ, day, time, onClose }: Props) {
   const [category, setCategory] = useState(event?.category ?? '')
   const [repeat, setRepeat] = useState(event ? repeatKey(event.rec_freq, event.rec_interval) : 'none')
   const [until, setUntil] = useState(event?.rec_until ?? '')
-  const [reminder, setReminder] = useState(event ? (event.reminder_minutes == null ? '' : String(event.reminder_minutes)) : '30')
+  const [reminder, setReminder] = useState<Reminder>(() => (event ? reminderFrom(event, event.all_day ? null : event.start_local.slice(11)) : DEFAULT_REMINDER))
   const [location, setLocation] = useState(event?.location ?? '')
   const [notes, setNotes] = useState(event?.notes ?? '')
   const [yearKnown, setYearKnown] = useState(event ? event.birth_year != null : true)
@@ -91,7 +78,6 @@ export default function EventForm({ event, occ, day, time, onClose }: Props) {
   const [busy, setBusy] = useState(false)
 
   const birthday = kind === 'birthday'
-  const reminders = birthday ? REMINDERS_BIRTHDAY : allDay ? REMINDERS_ALL_DAY : REMINDERS_TIMED
 
   // Autres rendez-vous de la même personne au même moment (simple avertissement, rien n'est bloqué)
   const clashes = useMemo(() => {
@@ -120,8 +106,7 @@ export default function EventForm({ event, occ, day, time, onClose }: Props) {
 
   const changeKind = (k: 'event' | 'birthday') => {
     setKind(k)
-    // Un anniversaire se prépare : par défaut on prévient quelques jours avant
-    setReminder(k === 'birthday' ? '4320' : '30')
+    setReminder(k === 'birthday' ? DEFAULT_BIRTHDAY_REMINDER : DEFAULT_REMINDER)
     setOwner(k === 'birthday' ? BOTH : me.id)
   }
 
@@ -138,8 +123,7 @@ export default function EventForm({ event, occ, day, time, onClose }: Props) {
 
   const toggleAllDay = (on: boolean) => {
     setAllDay(on)
-    const options = on ? REMINDERS_ALL_DAY : REMINDERS_TIMED
-    if (!options.some((o) => o.value === reminder)) setReminder('0')
+    if (on) setReminder(forAllDay(reminder))
   }
 
   const run = async (fn: () => Promise<unknown>, done?: () => void) => {
@@ -171,7 +155,8 @@ export default function EventForm({ event, occ, day, time, onClose }: Props) {
       rec_freq: rep.freq,
       rec_interval: rep.interval,
       rec_until: rep.freq !== 'none' && !birthday ? until || null : null,
-      reminder_minutes: reminder === '' ? null : Number(reminder),
+      reminder_minutes: reminder.minutes,
+      reminder_time: reminder.time,
       location: birthday ? '' : location.trim(),
       notes: notes.trim(),
       category: birthday ? '' : category,
@@ -275,12 +260,16 @@ export default function EventForm({ event, occ, day, time, onClose }: Props) {
       )}
 
       {!birthday && (
-        <div className="cats">
-          {CATEGORIES.map((c) => (
-            <button key={c.id} type="button" className={c.id === category ? 'chip on' : 'chip'} onClick={() => setCategory(c.id === category ? '' : c.id)}>
-              {c.icon} {c.label}
-            </button>
-          ))}
+        <div className="field">
+          <span className="label">Catégorie (facultatif)</span>
+          <div className="cats">
+            {CATEGORIES.map((c) => (
+              <button key={c.id} type="button" className={c.id === category ? 'cat on' : 'cat'} aria-pressed={c.id === category} onClick={() => setCategory(c.id === category ? '' : c.id)}>
+                <span className="ico">{c.icon}</span>
+                {c.label}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
@@ -303,16 +292,7 @@ export default function EventForm({ event, occ, day, time, onClose }: Props) {
         </label>
       )}
 
-      <label className="row">
-        <span>Rappel</span>
-        <select value={reminder} onChange={(e) => setReminder(e.target.value)}>
-          {reminders.map((r) => (
-            <option key={r.value} value={r.value}>
-              {r.label}
-            </option>
-          ))}
-        </select>
-      </label>
+      <ReminderPicker value={reminder} timed={!birthday && !allDay} onChange={setReminder} />
 
       {!birthday && (
         <>

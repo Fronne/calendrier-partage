@@ -106,6 +106,18 @@ export default function SettingsView({ data, zone, onZone, onLogout }: Props) {
     })
   }
 
+  const shareApp = () =>
+    run(async () => {
+      const url = window.location.origin
+      // Le code de couple ne voyage pas avec le lien : il se donne de vive voix
+      if (navigator.share) {
+        await navigator.share({ title: 'Calendrier partagé', url }).catch(() => {})
+        return
+      }
+      await navigator.clipboard.writeText(url)
+      return 'Adresse copiée.'
+    })
+
   // Sur iPhone, les notifications n'existent que pour une app ajoutée à l'écran d'accueil
   const needsInstall = isIos() && !isStandalone()
 
@@ -123,6 +135,16 @@ export default function SettingsView({ data, zone, onZone, onLogout }: Props) {
           Enregistrer
         </button>
       </section>
+
+      {!other && (
+        <section className="card">
+          <h2>Inviter ma moitié</h2>
+          <p className="muted">Vous êtes seul dans ce calendrier pour l'instant. Envoyez l'adresse de l'application, puis donnez votre code de couple de vive voix.</p>
+          <button className="primary" disabled={busy} onClick={shareApp}>
+            Partager l'adresse
+          </button>
+        </section>
+      )}
 
       <section className="card">
         <h2>Apparence</h2>

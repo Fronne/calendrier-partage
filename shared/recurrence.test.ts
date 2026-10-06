@@ -17,6 +17,7 @@ function ev(p: Partial<CalEvent>): CalEvent {
     rec_until: null,
     exdates: [],
     reminder_minutes: null,
+    reminder_time: null,
     category: '',
     kind: 'event',
     birth_year: null,
@@ -121,6 +122,24 @@ describe('dueReminders', () => {
   it('la veille pour un événement récurrent', () => {
     const e = ev({ rec_freq: 'weekly', reminder_minutes: 1440 })
     expect(due(e, '2026-10-12T13:59', '2026-10-12T14:00')).toEqual(['2026-10-13T14:00'])
+  })
+
+  it('heure choisie : la veille à 19 h pour un rendez-vous à 14 h', () => {
+    const e = ev({ reminder_minutes: 1440, reminder_time: '19:00' })
+    expect(due(e, '2026-10-05T18:59', '2026-10-05T19:00')).toEqual(['2026-10-06T14:00'])
+    expect(due(e, '2026-10-05T13:59', '2026-10-05T14:00')).toEqual([])
+    expect(due(e, '2026-10-06T18:59', '2026-10-06T19:00')).toEqual([])
+  })
+
+  it('heure choisie : le jour même à 7 h 30, série hebdomadaire', () => {
+    const e = ev({ rec_freq: 'weekly', reminder_minutes: 0, reminder_time: '07:30' })
+    expect(due(e, '2026-10-13T07:29', '2026-10-13T07:30')).toEqual(['2026-10-13T14:00'])
+  })
+
+  it('heure choisie : anniversaire, 3 jours avant à 18 h', () => {
+    const e = ev({ kind: 'birthday', all_day: true, start_local: '1990-10-13', end_local: '1990-10-13', rec_freq: 'yearly', reminder_minutes: 4320, reminder_time: '18:00' })
+    expect(due(e, '2026-10-10T17:59', '2026-10-10T18:00')).toEqual(['2026-10-13'])
+    expect(due(e, '2026-10-10T08:59', '2026-10-10T09:00')).toEqual([])
   })
 
   it('journée entière : rappel à 9 h', () => {

@@ -276,7 +276,7 @@ p {
 }
 
 .cell {
-  min-height: 70px;
+  min-height: 80px;
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -330,17 +330,25 @@ p {
   padding: 0 3px;
   border-radius: 4px;
   color: #fff;
-  font-size: 10px;
-  line-height: 14px;
+  font-size: 10.5px;
+  line-height: 18px;
+  height: 18px;
   text-align: left;
   white-space: nowrap;
   overflow: hidden;
 }
 
+/* Icône de catégorie : plus grande que le texte qui la suit, pour rester lisible dans une petite case */
+.ico {
+  font-size: 13px;
+  margin-right: 2px;
+  vertical-align: -1px;
+}
+
 .pill.task {
   background: transparent;
   border: 1px solid;
-  line-height: 12px;
+  line-height: 16px;
 }
 
 .pill.holiday-pill {
@@ -503,9 +511,20 @@ p {
 
 .item .time {
   flex: none;
-  width: 62px;
+  width: 50px;
+  display: flex;
+  flex-direction: column;
   font-size: 13px;
+  line-height: 1.3;
   font-variant-numeric: tabular-nums;
+}
+
+.item .time b {
+  font-weight: 600;
+}
+
+.item .time small {
+  font-size: 12px;
   color: var(--muted);
 }
 
@@ -919,10 +938,58 @@ p {
 }
 
 .cats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.cat {
   display: flex;
-  gap: 6px;
-  overflow-x: auto;
-  padding-bottom: 2px;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 2px 6px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  font-size: 12px;
+}
+
+.cat .ico {
+  font-size: 26px;
+  line-height: 32px;
+  margin: 0;
+}
+
+.cat.on {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, var(--card));
+  font-weight: 600;
+}
+
+.badge {
+  flex: none;
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  display: grid;
+  place-items: center;
+  font-size: 21px;
+  line-height: 1;
+}
+
+.badge i {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.block .ico {
+  display: block;
+  font-size: 14px;
+  line-height: 16px;
+  margin: 0;
 }
 
 .map-link {

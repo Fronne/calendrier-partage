@@ -44,6 +44,11 @@ export interface CalEvent {
   exdates: string[]
   /** null = pas de rappel */
   reminder_minutes: number | null
+  /**
+   * Heure choisie ('HH:mm') : le rappel part à cette heure, reminder_minutes / 1440 jours avant le jour du début.
+   * null : le rappel part reminder_minutes avant le début (ou avant 9 h pour une journée entière).
+   */
+  reminder_time: string | null
   /** Identifiant dans CATEGORIES, ou '' */
   category: string
   kind: 'event' | 'birthday'
@@ -62,8 +67,9 @@ export interface Task {
   /** Une tâche répétée cochée repart à son échéance suivante au lieu de passer en "terminée" */
   rec_freq: Freq
   rec_interval: number
-  /** Rappel compté depuis 9 h le jour de l'échéance ; null = aucun */
+  /** Rappel : mêmes règles que pour un rendez-vous « journée entière » ; null = aucun */
   reminder_minutes: number | null
+  reminder_time: string | null
   updated_at: string
 }
 

@@ -25,7 +25,7 @@ export default function TasksView({ tasks }: { tasks: Task[] }) {
   const quickAdd = (e: FormEvent) => {
     e.preventDefault()
     if (!title.trim()) return
-    const body = { id: uid(), title: title.trim(), due_date: null, owner: BOTH, done: false, rec_freq: 'none', rec_interval: 1, reminder_minutes: null }
+    const body = { id: uid(), title: title.trim(), due_date: null, owner: BOTH, done: false, rec_freq: 'none', rec_interval: 1, reminder_minutes: null, reminder_time: null }
     setTitle('')
     mutate({ method: 'POST', path: '/tasks', body }).catch((err) => toast(errorText(err)))
   }

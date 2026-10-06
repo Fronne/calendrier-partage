@@ -7,13 +7,21 @@ export function EventRow({ occ, day }: { occ: Occurrence; day: string }) {
   const { members, openEvent } = useStore()
   const ev = occ.event
   const icon = eventIcon(ev)
+  const color = colorOf(ev.owner, members)
+  // « 14:00 – 15:00 » s'affiche sur deux lignes : début, puis fin
+  const [from, to] = occTimeLabel(occ, day).split(' – ')
   return (
     <button className="item" onClick={() => openEvent(occ)}>
-      <span className="bar" style={{ background: colorOf(ev.owner, members) }} />
-      <span className="time">{occTimeLabel(occ, day)}</span>
+      {/* Pastille à la couleur de la personne : l'icône de catégorie, ou un simple point */}
+      <span className="badge" style={{ background: `color-mix(in srgb, ${color} 22%, transparent)` }}>
+        {icon || <i style={{ background: color }} />}
+      </span>
+      <span className="time">
+        <b>{from}</b>
+        {to && <small>{to}</small>}
+      </span>
       <span className="grow">
         <span className="item-title">
-          {icon && `${icon} `}
           {displayTitle(ev, occ.day)}
           {ev.rec_freq !== 'none' && ev.kind !== 'birthday' && <span className="muted"> ↻</span>}
         </span>
