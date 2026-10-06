@@ -46,7 +46,10 @@ export default function MonthView({ events, tasks, selectedDay, onSelectDay }: P
         <button aria-label="Mois précédent" onClick={() => go(-1)}>
           ‹
         </button>
-        <strong>{fmtMonth(month)}</strong>
+        <label className="pick" aria-label="Choisir un mois">
+          <strong>{fmtMonth(month)} ▾</strong>
+          <input type="month" value={month.slice(0, 7)} onChange={(e) => e.target.value && select(e.target.value + '-01')} />
+        </label>
         <button aria-label="Mois suivant" onClick={() => go(1)}>
           ›
         </button>

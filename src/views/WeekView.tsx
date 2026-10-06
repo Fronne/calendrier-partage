@@ -18,6 +18,7 @@ const HOUR_H = 44
 /** Heure affichée en haut à l'ouverture. */
 const FIRST_HOUR = 7
 const MIN_BLOCK_MIN = 30
+const SWIPE_PX = 60
 
 interface Block {
   occ: Occurrence
@@ -50,6 +51,7 @@ function layout(occs: Occurrence[], day: string) {
 export default function WeekView({ events, tasks, selectedDay, onSelectDay, onNewEvent }: Props) {
   const { members, dayInfo, openEvent, openTask } = useStore()
   const scroller = useRef<HTMLDivElement>(null)
+  const touchX = useRef<number | null>(null)
   const today = todayKey()
   const monday = mondayOf(selectedDay)
 
@@ -77,7 +79,10 @@ export default function WeekView({ events, tasks, selectedDay, onSelectDay, onNe
         <button aria-label="Semaine précédente" onClick={() => onSelectDay(addDays(selectedDay, -7))}>
           ‹
         </button>
-        <strong>{fmtRange(days[0], days[6])}</strong>
+        <label className="pick" aria-label="Choisir une date">
+          <strong>{fmtRange(days[0], days[6])} ▾</strong>
+          <input type="date" value={selectedDay} onChange={(e) => e.target.value && onSelectDay(e.target.value)} />
+        </label>
         <button aria-label="Semaine suivante" onClick={() => onSelectDay(addDays(selectedDay, 7))}>
           ›
         </button>
@@ -86,7 +91,16 @@ export default function WeekView({ events, tasks, selectedDay, onSelectDay, onNe
         </button>
       </div>
 
-      <div className="week">
+      <div
+        className="week"
+        onTouchStart={(e) => (touchX.current = e.touches[0].clientX)}
+        onTouchEnd={(e) => {
+          if (touchX.current == null) return
+          const dx = e.changedTouches[0].clientX - touchX.current
+          touchX.current = null
+          if (Math.abs(dx) > SWIPE_PX) onSelectDay(addDays(selectedDay, dx < 0 ? 7 : -7))
+        }}
+      >
         <div className="week-row week-days">
           <span />
           {days.map((day, i) => {

@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import type { SyncData } from '../../shared/types'
+import { useEffect, useRef, useState } from 'react'
+import { BOTH, type Member, type SyncData } from '../../shared/types'
 import { api, errorText } from '../api'
 import { PALETTE } from '../colors'
 import { todayKey } from '../dates'
@@ -32,7 +32,8 @@ function exportData(data: SyncData) {
 }
 
 export default function SettingsView({ data, zone, onZone, onLogout }: Props) {
-  const { me, members, mutate } = useStore()
+  const { me, members, mutate, refresh } = useStore()
+  const fileInput = useRef<HTMLInputElement>(null)
   const other = members.find((m) => m.id !== me.id)
   const [name, setName] = useState(me.name)
   const [color, setColor] = useState(me.color)
@@ -82,6 +83,28 @@ export default function SettingsView({ data, zone, onZone, onLogout }: Props) {
       const { sent } = await api<{ sent: number }>('/push/test', 'POST')
       return sent ? 'Notification envoyée : elle arrive dans quelques secondes.' : "L'envoi a échoué. Désactivez puis réactivez les notifications."
     })
+
+  const restore = (file: File | undefined) => {
+    if (!file) return
+    run(async () => {
+      let backup: { members?: Member[]; events?: any[]; tasks?: any[] }
+      try {
+        backup = JSON.parse(await file.text())
+      } catch {
+        throw new Error("Ce fichier n'est pas une sauvegarde du calendrier.")
+      }
+      if (!Array.isArray(backup.events) || !Array.isArray(backup.tasks)) throw new Error("Ce fichier n'est pas une sauvegarde du calendrier.")
+      // Les identifiants des personnes peuvent avoir changé : on les retrouve par prénom, sinon « nous deux »
+      const ownerFor = (old: string) => {
+        const name = backup.members?.find((m) => m.id === old)?.name.toLowerCase()
+        return members.find((m) => m.id === old || m.name.toLowerCase() === name)?.id ?? BOTH
+      }
+      const fix = (items: any[]) => items.map((i) => ({ ...i, owner: ownerFor(i.owner) }))
+      const res = await api<{ restored: number; already: number; skipped: number }>('/restore', 'POST', { events: fix(backup.events), tasks: fix(backup.tasks) })
+      await refresh()
+      return `${res.restored} élément(s) restauré(s), ${res.already} déjà présent(s)${res.skipped ? `, ${res.skipped} illisible(s)` : ''}.`
+    })
+  }
 
   // Sur iPhone, les notifications n'existent que pour une app ajoutée à l'écran d'accueil
   const needsInstall = isIos() && !isStandalone()
@@ -166,6 +189,20 @@ export default function SettingsView({ data, zone, onZone, onLogout }: Props) {
         <button className="secondary" onClick={() => exportData(data)}>
           Exporter mes données
         </button>
+        <p className="muted">Restaurer remet ce qui manque à partir d'un fichier exporté, sans rien écraser ni supprimer.</p>
+        <button className="secondary" disabled={busy} onClick={() => fileInput.current?.click()}>
+          Restaurer une sauvegarde
+        </button>
+        <input
+          ref={fileInput}
+          type="file"
+          accept="application/json,.json"
+          hidden
+          onChange={(e) => {
+            restore(e.target.files?.[0])
+            e.target.value = ''
+          }}
+        />
       </section>
 
       {message && <p className="notice">{message}</p>}

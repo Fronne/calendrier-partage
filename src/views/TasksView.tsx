@@ -11,6 +11,7 @@ const DONE_SHOWN = 20
 export default function TasksView({ tasks }: { tasks: Task[] }) {
   const { mutate, toast } = useStore()
   const [title, setTitle] = useState('')
+  const [showDone, setShowDone] = useState(false)
 
   // À faire : d'abord celles qui ont une échéance, par date ; les autres ensuite
   const todo = tasks
@@ -47,12 +48,16 @@ export default function TasksView({ tasks }: { tasks: Task[] }) {
 
       {done.length > 0 && (
         <>
-          <h2 className="day-title">Terminées</h2>
-          <div className="items">
-            {done.map((t) => (
-              <TaskRow key={t.id} task={t} />
-            ))}
-          </div>
+          <button className="fold" onClick={() => setShowDone(!showDone)}>
+            {showDone ? '▾' : '▸'} Terminées ({done.length})
+          </button>
+          {showDone && (
+            <div className="items">
+              {done.map((t) => (
+                <TaskRow key={t.id} task={t} />
+              ))}
+            </div>
+          )}
         </>
       )}
     </>

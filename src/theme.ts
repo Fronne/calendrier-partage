@@ -11,7 +11,17 @@ export function getTheme(): Theme {
 export function applyTheme(theme: Theme) {
   if (theme === 'auto') delete document.documentElement.dataset.theme
   else document.documentElement.dataset.theme = theme
+  syncStatusBar()
 }
+
+/** La barre du haut du téléphone prend la couleur de fond de l'app. */
+function syncStatusBar() {
+  const bg = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim()
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', bg)
+}
+
+// En mode automatique, suit le passage clair/sombre du téléphone
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', syncStatusBar)
 
 export function setTheme(theme: Theme) {
   if (theme === 'auto') localStorage.removeItem(THEME_KEY)

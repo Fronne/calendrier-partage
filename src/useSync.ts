@@ -103,16 +103,17 @@ export function useSync(onUnauthorized: () => void) {
     const whenVisible = () => {
       if (document.visibilityState === 'visible') refresh()
     }
-    whenVisible()
+    // Premier chargement sans condition ; ensuite on ne rafraîchit que si l'app est à l'écran
+    refresh()
     const timer = setInterval(whenVisible, REFRESH_MS)
     document.addEventListener('visibilitychange', whenVisible)
     window.addEventListener('focus', whenVisible)
-    window.addEventListener('online', whenVisible)
+    window.addEventListener('online', refresh)
     return () => {
       clearInterval(timer)
       document.removeEventListener('visibilitychange', whenVisible)
       window.removeEventListener('focus', whenVisible)
-      window.removeEventListener('online', whenVisible)
+      window.removeEventListener('online', refresh)
     }
   }, [refresh])
 

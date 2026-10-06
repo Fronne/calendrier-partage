@@ -1,6 +1,6 @@
 import { Hono, type Context } from 'hono'
 import { parseLocal } from '../shared/recurrence'
-import { BOTH, CATEGORIES, displayTitle, eventIcon, FREQS, type CalEvent, type Freq, type SyncData } from '../shared/types'
+import { BOTH, CATEGORIES, displayTitle, eventIcon, FREQS, type CalEvent, type Freq, type Member, type SyncData } from '../shared/types'
 import { codeMatches, makeToken, verifyToken } from './auth'
 import { allEvents, allMembers, allTasks, getMeta, rowToEvent } from './db'
 import type { Env } from './env'
@@ -141,9 +141,10 @@ function notifyOther(c: Ctx, action: string, body: string) {
 
 // ---------- Rendez-vous ----------
 
-async function checkOwner(env: Env, owner: unknown): Promise<string> {
+// `members` évite de relire la base à chaque élément quand on en traite beaucoup (restauration)
+async function checkOwner(env: Env, owner: unknown, members?: Member[]): Promise<string> {
   if (owner === BOTH) return BOTH
-  if (typeof owner === 'string' && (await allMembers(env)).some((m) => m.id === owner)) return owner
+  if (typeof owner === 'string' && (members ?? (await allMembers(env))).some((m) => m.id === owner)) return owner
   throw bad('Personne inconnue.')
 }
 
@@ -159,7 +160,7 @@ function cleanReminder(v: unknown): number | null {
   return minutes
 }
 
-async function cleanEvent(env: Env, b: any) {
+async function cleanEvent(env: Env, b: any, members?: Member[]) {
   const title = text(b.title, 200)
   if (!title) throw bad('Le titre est obligatoire.')
   const birthday = b.kind === 'birthday'
@@ -175,7 +176,7 @@ async function cleanEvent(env: Env, b: any) {
     all_day: all_day ? 1 : 0,
     location: text(b.location, 200),
     notes: text(b.notes, 2000),
-    owner: await checkOwner(env, b.owner),
+    owner: await checkOwner(env, b.owner, members),
     ...repeat,
     rec_until: !birthday && repeat.rec_freq !== 'none' && DATE.test(b.rec_until) ? (b.rec_until as string) : null,
     exdates: JSON.stringify(Array.isArray(b.exdates) ? b.exdates.filter((d: unknown) => typeof d === 'string' && DATE.test(d)).slice(0, 500) : []),
@@ -280,7 +281,7 @@ app.post('/api/events/:id/detach', async (c) => {
 
 // ---------- Tâches ----------
 
-async function cleanTask(env: Env, b: any) {
+async function cleanTask(env: Env, b: any, members?: Member[]) {
   const title = text(b.title, 200)
   if (!title) throw bad('Le titre est obligatoire.')
   const done = !!b.done
@@ -288,7 +289,7 @@ async function cleanTask(env: Env, b: any) {
   return {
     title,
     due_date,
-    owner: await checkOwner(env, b.owner),
+    owner: await checkOwner(env, b.owner, members),
     done: done ? 1 : 0,
     done_at: done ? now() : null,
     // Répétition et rappel n'ont de sens qu'avec une échéance
@@ -297,16 +298,20 @@ async function cleanTask(env: Env, b: any) {
   }
 }
 
+type CleanTask = Awaited<ReturnType<typeof cleanTask>>
+
+function insertTask(env: Env, id: string, t: CleanTask) {
+  return env.DB.prepare(
+    `INSERT OR IGNORE INTO tasks (id, title, due_date, owner, done, done_at, rec_freq, rec_interval, reminder_minutes, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  ).bind(id, t.title, t.due_date, t.owner, t.done, t.done_at, t.rec_freq, t.rec_interval, t.reminder_minutes, now())
+}
+
 app.post('/api/tasks', async (c) => {
   const b = await c.req.json()
   const t = await cleanTask(c.env, b)
   const id = idFrom(b.id)
-  const res = await c.env.DB.prepare(
-    `INSERT OR IGNORE INTO tasks (id, title, due_date, owner, done, done_at, rec_freq, rec_interval, reminder_minutes, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-  )
-    .bind(id, t.title, t.due_date, t.owner, t.done, t.done_at, t.rec_freq, t.rec_interval, t.reminder_minutes, now())
-    .run()
+  const res = await insertTask(c.env, id, t).run()
   if (res.meta.changes) notifyOther(c, 'a ajouté une tâche', t.due_date ? `${t.title} · pour le ${whenLabel(t.due_date)}` : t.title)
   return c.json({ id })
 })
@@ -326,6 +331,39 @@ app.put('/api/tasks/:id', async (c) => {
 app.delete('/api/tasks/:id', async (c) => {
   await c.env.DB.prepare('DELETE FROM tasks WHERE id = ?').bind(c.req.param('id')).run()
   return c.json({ ok: true })
+})
+
+// ---------- Restauration d'une sauvegarde ----------
+
+const RESTORE_MAX = 5000
+const BATCH_SIZE = 50
+
+// Remet ce qui manque à partir d'un fichier exporté. Ce qui existe déjà (même identifiant) n'est pas touché.
+app.post('/api/restore', async (c) => {
+  const b = await c.req.json()
+  const lists = { events: Array.isArray(b.events) ? b.events : [], tasks: Array.isArray(b.tasks) ? b.tasks : [] }
+  if (lists.events.length + lists.tasks.length > RESTORE_MAX) throw bad('Fichier trop volumineux.')
+
+  const members = await allMembers(c.env)
+  const statements: D1PreparedStatement[] = []
+  let skipped = 0
+  for (const [kind, items] of Object.entries(lists)) {
+    for (const item of items) {
+      try {
+        if (!UUID.test(item?.id)) throw bad('Identifiant invalide.')
+        statements.push(kind === 'events' ? insertEvent(c.env, item.id, await cleanEvent(c.env, item, members)) : insertTask(c.env, item.id, await cleanTask(c.env, item, members)))
+      } catch {
+        skipped++
+      }
+    }
+  }
+
+  let restored = 0
+  for (let i = 0; i < statements.length; i += BATCH_SIZE) {
+    const results = await c.env.DB.batch(statements.slice(i, i + BATCH_SIZE))
+    restored += results.reduce((n, r) => n + (r.meta.changes ?? 0), 0)
+  }
+  return c.json({ restored, already: statements.length - restored, skipped })
 })
 
 // ---------- Notifications ----------

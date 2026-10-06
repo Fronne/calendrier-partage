@@ -937,3 +937,82 @@ p {
 .row > span:first-child {
   flex: 1 1 auto;
 }
+
+/* ---------- Finitions ---------- */
+
+/* La dernière ligne d une liste doit pouvoir remonter au-dessus du bouton + */
+.content {
+  padding-bottom: 76px;
+}
+
+/* Zone de toucher plus large que le rond de la case à cocher */
+.check {
+  position: relative;
+}
+
+.check::before {
+  content: '';
+  position: absolute;
+  inset: -10px;
+}
+
+.warn {
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: #fef3c7;
+  color: #92400e;
+  font-size: 14px;
+}
+
+.invite {
+  margin: 0 16px 12px;
+  padding: 14px;
+  border-radius: 14px;
+  background: var(--card);
+  border: 1px solid var(--accent);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.invite p {
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.fold {
+  display: block;
+  margin: 18px 4px 8px;
+  min-height: 36px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.wide {
+  display: block;
+  width: 100%;
+  margin-top: 18px;
+}
+
+/* Titre du mois ou de la semaine : un sélecteur de date invisible posé dessus ouvre le calendrier du téléphone */
+.pick {
+  position: relative;
+  min-width: 150px;
+  text-align: center;
+}
+
+.pick strong {
+  font-size: 18px;
+  min-width: 0;
+}
+
+.pick input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  min-height: 0;
+  height: 100%;
+  padding: 0;
+  opacity: 0;
+}

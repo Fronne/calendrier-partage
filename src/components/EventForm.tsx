@@ -1,6 +1,6 @@
-import { useState } from 'react'
-import { fmtLocal, parseLocal } from '../../shared/recurrence'
-import { BOTH, CATEGORIES, type CalEvent, type Freq, type Occurrence } from '../../shared/types'
+import { useMemo, useState } from 'react'
+import { expand, fmtLocal, parseLocal } from '../../shared/recurrence'
+import { BOTH, CATEGORIES, displayTitle, type CalEvent, type Freq, type Occurrence } from '../../shared/types'
 import { errorText } from '../api'
 import { nextHour } from '../dates'
 import { uid } from '../ops'
@@ -48,13 +48,16 @@ export const REMINDERS_ALL_DAY = [
 
 const REMINDERS_BIRTHDAY = [...REMINDERS_ALL_DAY, { value: '4320', label: '3 jours avant' }, { value: '10080', label: '1 semaine avant' }]
 
+/** Chevauchements signalés au maximum dans le formulaire. */
+const MAX_CLASHES = 3
+
 const plusOneHour = (local: string) => fmtLocal(new Date(parseLocal(local).getTime() + 3_600_000))
 
 const mapsUrl = (place: string) =>
   (isIos() ? 'https://maps.apple.com/?q=' : 'https://www.google.com/maps/search/?api=1&query=') + encodeURIComponent(place)
 
 export default function EventForm({ event, occ, day, time, onClose }: Props) {
-  const { me, members, mutate, toast } = useStore()
+  const { me, members, events, mutate, toast } = useStore()
 
   // Une date précise d'une série : on peut la modifier seule ou modifier toute la série
   const inSeries = !!event && !!occ && event.rec_freq !== 'none' && event.kind !== 'birthday'
@@ -89,6 +92,20 @@ export default function EventForm({ event, occ, day, time, onClose }: Props) {
 
   const birthday = kind === 'birthday'
   const reminders = birthday ? REMINDERS_BIRTHDAY : allDay ? REMINDERS_ALL_DAY : REMINDERS_TIMED
+
+  // Autres rendez-vous de la même personne au même moment (simple avertissement, rien n'est bloqué)
+  const clashes = useMemo(() => {
+    if (birthday || allDay) return []
+    const start = `${startDay}T${startTime}`
+    const end = `${endDay}T${endTime}`
+    if (end <= start) return []
+    const concerns = (other: string) => owner === BOTH || other === BOTH || other === owner
+    return events
+      .filter((e) => e.id !== event?.id && e.kind === 'event' && !e.all_day && concerns(e.owner))
+      .flatMap((e) => expand(e, startDay, endDay))
+      .filter((o) => o.start < end && o.end > start)
+      .slice(0, MAX_CLASHES)
+  }, [events, event, birthday, allDay, startDay, startTime, endDay, endTime, owner])
 
   const changeScope = (s: 'one' | 'series') => {
     const d = datesFor(s)
@@ -250,6 +267,12 @@ export default function EventForm({ event, occ, day, time, onClose }: Props) {
         <span className="label">Pour qui</span>
         <OwnerPicker value={owner} members={members} onChange={setOwner} />
       </div>
+
+      {clashes.length > 0 && (
+        <p className="warn">
+          ⚠ En même temps : {clashes.map((o) => `${displayTitle(o.event)} (${o.start.slice(11)} – ${o.end.slice(11)})`).join(', ')}
+        </p>
+      )}
 
       {!birthday && (
         <div className="cats">
