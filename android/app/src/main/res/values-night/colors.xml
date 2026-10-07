@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="nav_bar">#171923</color>
+    <color name="bg">#0d0e14</color>
+    <color name="surface">#171923</color>
+    <color name="fg">#f1f1f6</color>
+    <color name="muted">#9a9cb4</color>
+    <color name="accent">#8f86ff</color>
+    <color name="on_accent">#0d0e14</color>
+    <color name="danger">#ff6b70</color>
+</resources>

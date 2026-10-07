@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Calendrier partagé</string>
+    <string name="app_short_name">Calendrier</string>
+
+    <string name="widget_name">À venir</string>
+    <string name="widget_description">Vos prochains rendez-vous et tâches</string>
+    <string name="widget_empty">Rien de prévu dans les prochaines semaines.</string>
+    <string name="widget_connect">Touchez pour connecter le widget.</string>
+    <string name="widget_refresh">Actualiser</string>
+    <string name="widget_add">Nouveau rendez-vous</string>
+    <string name="widget_today">Aujourd\'hui</string>
+    <string name="widget_tomorrow">Demain</string>
+    <string name="widget_late">En retard</string>
+    <string name="widget_task">À faire</string>
+
+    <string name="setup_title">Widget du calendrier</string>
+    <string name="setup_intro">Entrez votre code de couple pour afficher vos prochains rendez-vous sur l\'écran d\'accueil.</string>
+    <string name="setup_code">Code de couple</string>
+    <string name="setup_continue">Continuer</string>
+    <string name="setup_who">Qui utilise ce téléphone ?</string>
+    <string name="setup_nobody">Ouvrez d\'abord l\'application pour créer votre profil.</string>
+    <string name="error_offline">Pas de connexion internet.</string>
+    <string name="error_generic">Une erreur est survenue.</string>
+</resources>

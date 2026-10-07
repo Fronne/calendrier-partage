@@ -17,6 +17,8 @@ export function parseLocal(s: string): Date {
 export const fmtDay = (d: Date) => d.toISOString().slice(0, 10)
 export const fmtLocal = (d: Date) => d.toISOString().slice(0, 16)
 
+export const addDays = (day: string, n: number) => fmtDay(new Date(parseLocal(day).getTime() + n * DAY))
+
 /** Ajoute n mois en gardant le jour du mois, ramené au dernier jour si le mois est trop court. */
 export function addMonthsClamped(d: Date, n: number): Date {
   const y = d.getUTCFullYear()
@@ -79,6 +81,40 @@ export function expand(ev: CalEvent, fromDay: string, toDay: string): Occurrence
     if (ev.rec_freq === 'none') break
   }
   return out
+}
+
+/** Occurrences rangées par jour affiché ; un événement sur plusieurs jours apparaît chaque jour concerné. */
+export function occurrencesByDay(events: CalEvent[], from: string, to: string): Map<string, Occurrence[]> {
+  const map = new Map<string, Occurrence[]>()
+  for (const ev of events) {
+    for (const occ of expand(ev, from, to)) {
+      let last = occ.end.slice(0, 10)
+      // Un événement qui finit à minuit pile ne déborde pas sur le jour suivant
+      if (!ev.all_day && occ.end.slice(11) === '00:00' && last > occ.day) last = addDays(last, -1)
+      for (let d = occ.day < from ? from : occ.day; d <= last && d <= to; d = addDays(d, 1)) {
+        if (!map.has(d)) map.set(d, [])
+        map.get(d)!.push(occ)
+      }
+    }
+  }
+  for (const [day, list] of map) {
+    const key = (o: Occurrence) => (o.event.all_day || o.day < day ? '' : o.start)
+    list.sort((a, b) => key(a).localeCompare(key(b)) || a.event.title.localeCompare(b.event.title))
+  }
+  return map
+}
+
+/** Horaire d'une occurrence telle qu'elle se présente un jour donné. */
+export function occTimeLabel(occ: Occurrence, day: string): string {
+  if (occ.event.all_day) return 'Journée'
+  const startDay = occ.start.slice(0, 10)
+  const endDay = occ.end.slice(0, 10)
+  const start = occ.start.slice(11)
+  const end = occ.end.slice(11)
+  if (startDay === endDay) return start === end ? start : `${start} – ${end}`
+  if (day === startDay) return `${start} →`
+  if (day === endDay) return `→ ${end}`
+  return 'Journée'
 }
 
 /** Prochaine échéance d'une tâche répétée que l'on vient de cocher : toujours après `today`. */

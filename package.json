@@ -10,6 +10,7 @@
     "test": "vitest run",
     "typecheck": "tsc -p . && tsc -p worker",
     "icons": "node scripts/gen-icons.mjs",
+    "apk": "cd android && .\\gradlew.bat assembleRelease",
     "db:remote": "wrangler d1 migrations apply calendrier --remote",
     "deploy": "vite build && wrangler deploy"
   },

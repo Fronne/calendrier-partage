@@ -6,6 +6,7 @@ import { allEvents, allMembers, allTasks, getMeta, rowToEvent } from './db'
 import type { Env } from './env'
 import { schoolHolidays, ZONE_ACADEMY } from './holidays'
 import { deliver, runReminders, type SubRow } from './reminders'
+import { widgetData } from './widget'
 
 const MAX_MEMBERS = 2
 const MAX_LOGIN_FAILS = 10
@@ -41,6 +42,21 @@ app.onError((err, c) => {
   console.error(err)
   return c.json({ error: 'Erreur du serveur.' }, 500)
 })
+
+// Autorise l'application Android signée avec cette clé à afficher le site en plein écran, sans barre d'adresse.
+// Servi par le Worker : rangé avec les fichiers du site, le dossier .well-known n'est pas distribué correctement.
+app.get('/.well-known/assetlinks.json', (c) =>
+  c.json([
+    {
+      relation: ['delegate_permission/common.handle_all_urls'],
+      target: {
+        namespace: 'android_app',
+        package_name: 'app.calendrierpartage',
+        sha256_cert_fingerprints: ['A1:92:49:F3:5C:49:6B:31:EF:8E:08:58:9B:D3:9B:18:AA:22:0C:BE:22:63:67:15:18:31:66:34:22:E5:41:44'],
+      },
+    },
+  ]),
+)
 
 app.post('/api/login', async (c) => {
   const env = c.env
@@ -89,6 +105,13 @@ app.get('/api/sync', async (c) => {
   const me = c.get('memberId')
   if (!members.some((m) => m.id === me)) throw new HttpError(401, 'Reconnectez-vous.')
   return c.json({ me, members, events, tasks } satisfies SyncData)
+})
+
+// Ce que le widget Android affiche : les prochains jours, déjà mis en forme
+app.get('/api/widget', async (c) => {
+  const [members, events, tasks] = await Promise.all([allMembers(c.env), allEvents(c.env), allTasks(c.env)])
+  if (!members.some((m) => m.id === c.get('memberId'))) throw new HttpError(401, 'Reconnectez-vous.')
+  return c.json(widgetData(c.env.TZ_NAME, members, events, tasks))
 })
 
 app.put('/api/me', async (c) => {

@@ -1,5 +1,6 @@
 // Dessine l'icône de l'application (un petit calendrier) et l'écrit en PNG, sans dépendance.
 import { mkdirSync, writeFileSync } from 'node:fs'
+import { dirname } from 'node:path'
 import { deflateSync } from 'node:zlib'
 
 const BG = [79, 70, 229]
@@ -78,8 +79,17 @@ function png(size) {
   ])
 }
 
-mkdirSync('public', { recursive: true })
-for (const [name, size] of [['icon-192.png', 192], ['icon-512.png', 512], ['apple-touch-icon.png', 180]]) {
-  writeFileSync(`public/${name}`, png(size))
-  console.log('public/' + name)
+// Android : le même dessin sert d'avant-plan à l'icône (432 px = 108 dp en xxxhdpi) et d'écran de démarrage
+const ANDROID = 'android/app/src/main/res/drawable-nodpi'
+const files = [
+  ['public/icon-192.png', 192],
+  ['public/icon-512.png', 512],
+  ['public/apple-touch-icon.png', 180],
+  [`${ANDROID}/ic_launcher_foreground.png`, 432],
+  [`${ANDROID}/splash.png`, 512],
+]
+for (const [path, size] of files) {
+  mkdirSync(dirname(path), { recursive: true })
+  writeFileSync(path, png(size))
+  console.log(path)
 }

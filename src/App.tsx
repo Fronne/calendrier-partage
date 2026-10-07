@@ -64,6 +64,13 @@ function Calendar({ onLogout }: { onLogout: () => void }) {
   const [zone, setZone] = useState(getZone)
   const periods = useSchoolHolidays(zone)
 
+  // Le bouton « + » du widget Android ouvre l'application sur un nouveau rendez-vous (/?new=1)
+  useEffect(() => {
+    if (!new URLSearchParams(location.search).has('new')) return
+    history.replaceState(null, '', location.pathname)
+    setEditing({ kind: 'event', day: todayKey() })
+  }, [])
+
   useEffect(() => {
     if (!toast) return
     const timer = setTimeout(() => setToast(null), TOAST_MS)

@@ -5,6 +5,9 @@ export const FREQS: Freq[] = ['none', 'daily', 'weekly', 'monthly', 'yearly']
 /** Valeur de `owner` pour ce qui concerne les deux personnes. */
 export const BOTH = 'both'
 
+/** Couleur de ce qui concerne les deux. */
+export const BOTH_COLOR = '#7c3aed'
+
 export const CATEGORIES = [
   { id: 'work', icon: '💼', label: 'Travail' },
   { id: 'health', icon: '🩺', label: 'Santé' },

@@ -1,0 +1,66 @@
+plugins {
+    id 'com.android.application'
+}
+
+// Adresse du site affiché par l'application et interrogé par le widget
+def host = 'calendrier-partage.dofus-craft.workers.dev'
+
+def keys = new Properties()
+def keysFile = rootProject.file('keystore.properties')
+if (keysFile.exists()) keysFile.withInputStream { keys.load(it) }
+
+android {
+    namespace 'app.calendrierpartage'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'app.calendrierpartage'
+        minSdk 26
+        targetSdk 35
+        versionCode 1
+        versionName '1.0'
+
+        manifestPlaceholders = [host: host]
+        resValue 'string', 'launch_url', "https://${host}/"
+        // Déclare le lien entre l'application et le site (l'autre moitié : /.well-known/assetlinks.json, dans worker/index.ts)
+        resValue 'string', 'asset_statements',
+                '[{ \\"relation\\": [\\"delegate_permission/common.handle_all_urls\\"],' +
+                ' \\"target\\": { \\"namespace\\": \\"web\\", \\"site\\": \\"https://' + host + '\\" } }]'
+        buildConfigField 'String', 'API_URL', "\"https://${host}/api\""
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    signingConfigs {
+        release {
+            if (keysFile.exists()) {
+                storeFile rootProject.file(keys['storeFile'])
+                storePassword keys['storePassword']
+                keyAlias keys['keyAlias']
+                keyPassword keys['keyPassword']
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.release
+        }
+        debug {
+            // Le widget de test parle au serveur local (npm run dev) depuis l'émulateur
+            buildConfigField 'String', 'API_URL', '"http://10.0.2.2:8787/api"'
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    implementation 'com.google.androidbrowserhelper:androidbrowserhelper:2.5.0'
+}
