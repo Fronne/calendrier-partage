@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
+import { useBackClose } from '../back'
 
 export interface Option {
   value: string
@@ -18,6 +19,7 @@ interface Props {
 /** Liste de choix dans une petite fenêtre de l'application, à la place de la liste native du téléphone. */
 export default function Choice({ label, value, options, onChange }: Props) {
   const [open, setOpen] = useState(false)
+  useBackClose(() => setOpen(false), open)
   const current = options.find((o) => o.value === value)
 
   return (

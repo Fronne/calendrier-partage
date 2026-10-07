@@ -18,6 +18,8 @@ interface Props {
   data: SyncData
   zone: string
   onZone: (zone: string) => void
+  weekNums: boolean
+  onWeekNums: (on: boolean) => void
   onLogout: () => void
 }
 
@@ -31,7 +33,7 @@ function exportData(data: SyncData) {
   URL.revokeObjectURL(url)
 }
 
-export default function SettingsView({ data, zone, onZone, onLogout }: Props) {
+export default function SettingsView({ data, zone, onZone, weekNums, onWeekNums, onLogout }: Props) {
   const { me, members, mutate, refresh } = useStore()
   const fileInput = useRef<HTMLInputElement>(null)
   const other = members.find((m) => m.id !== me.id)
@@ -155,6 +157,10 @@ export default function SettingsView({ data, zone, onZone, onLogout }: Props) {
             </button>
           ))}
         </div>
+        <label className="row">
+          <span>Afficher les numéros de semaine</span>
+          <input type="checkbox" className="switch" checked={weekNums} onChange={(e) => onWeekNums(e.target.checked)} />
+        </label>
       </section>
 
       <section className="card">

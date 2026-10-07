@@ -1,12 +1,13 @@
 import { useMemo, useRef, useState } from 'react'
 import { expand, fmtLocal, parseLocal } from '../../shared/recurrence'
-import { BOTH, CATEGORIES, displayTitle, type CalEvent, type Freq, type Occurrence } from '../../shared/types'
+import { BOTH, CATEGORIES, categoryIcon, categoryOf, displayTitle, MAIN_CATEGORIES, type CalEvent, type Freq, type Occurrence } from '../../shared/types'
 import { errorText } from '../api'
 import { nextHour } from '../dates'
 import { uid } from '../ops'
 import { isIos } from '../push'
 import { useStore } from '../store'
 import Choice from './Choice'
+import Icon from './Icon'
 import OwnerPicker from './OwnerPicker'
 import ReminderPicker, { forAllDay, reminderFrom, type Reminder } from './ReminderPicker'
 import Sheet, { FormError } from './Sheet'
@@ -80,6 +81,11 @@ export default function EventForm({ event, occ, day, time, onClose }: Props) {
   const [busy, setBusy] = useState(false)
 
   const birthday = kind === 'birthday'
+
+  const chosenCat = category ? categoryOf(category) : undefined
+  const chosenExtra = !!chosenCat && CATEGORIES.indexOf(chosenCat) >= MAIN_CATEGORIES
+  const [moreOpen, setMoreOpen] = useState(false)
+  const moreCats = moreOpen || chosenExtra
 
   // Saisie en cours = les champs ne sont plus ceux de l'ouverture (null : référence à reprendre au prochain rendu)
   const snapshot = JSON.stringify([kind, title, allDay, startDay, startTime, endDay, endTime, owner, category, repeat, until, reminder, location, notes, yearKnown])
@@ -231,7 +237,7 @@ export default function EventForm({ event, occ, day, time, onClose }: Props) {
         </div>
       )}
 
-      <input className="title-input" placeholder={birthday ? 'Prénom' : 'Titre'} aria-label={birthday ? 'Prénom' : 'Titre'} value={title} onChange={(e) => setTitle(e.target.value)} maxLength={200} autoFocus={!event} />
+      <input className="title-input" placeholder={birthday ? 'Prénom' : 'Titre'} aria-label={birthday ? 'Prénom' : 'Titre'} value={title} onChange={(e) => setTitle(e.target.value)} maxLength={200} />
       <FormError text={error} />
 
       {birthday ? (
@@ -283,13 +289,33 @@ export default function EventForm({ event, occ, day, time, onClose }: Props) {
         <div className="field">
           <span className="label">Catégorie (facultatif)</span>
           <div className="cats">
-            {CATEGORIES.map((c) => (
-              <button key={c.id} type="button" className={c.id === category ? 'cat on' : 'cat'} aria-pressed={c.id === category} onClick={() => setCategory(c.id === category ? '' : c.id)}>
-                <span className="ico" aria-hidden="true">{c.icon}</span>
-                {c.label}
-              </button>
-            ))}
+            {CATEGORIES.slice(0, moreCats ? undefined : MAIN_CATEGORIES).map((c) => {
+              const on = c === chosenCat
+              return (
+                <button key={c.id} type="button" className={on ? 'cat on' : 'cat'} aria-pressed={on} onClick={() => setCategory(on ? '' : c.id)}>
+                  <span className="ico" aria-hidden="true">{on ? categoryIcon(category) : c.icon}</span>
+                  {c.label}
+                </button>
+              )
+            })}
           </div>
+          {chosenCat?.variants && (
+            <div className="chips variants" role="group" aria-label={chosenCat.label}>
+              {chosenCat.variants.map((v) => (
+                <button key={v.id} type="button" className={v.id === category ? 'chip on' : 'chip'} aria-pressed={v.id === category} onClick={() => setCategory(v.id)}>
+                  <span aria-hidden="true">{v.icon}</span>
+                  {v.label}
+                </button>
+              ))}
+            </div>
+          )}
+          {/* Une catégorie choisie dans la suite de la liste reste visible : on ne replie pas par-dessus */}
+          {!chosenExtra && (
+            <button type="button" className="cats-more" aria-expanded={moreCats} onClick={() => setMoreOpen(!moreOpen)}>
+              {moreCats ? 'Moins de catégories' : 'Plus de catégories'}
+              <Icon name="down" size={16} className={moreCats ? 'flip' : undefined} />
+            </button>
+          )}
         </div>
       )}
 

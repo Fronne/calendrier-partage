@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode, type TouchEvent } from 'react'
 import { createPortal } from 'react-dom'
+import { useBackClose } from '../back'
 
 // Glissement vers le bas : distance avant qu'il s'engage, puis distance ou vitesse (px/ms) qui ferme le panneau
 const START_PX = 8
@@ -113,6 +114,13 @@ export default function Sheet({ title, busy, dirty, onClose, onSubmit, children 
     setAsking(false)
     settle(0)
   }
+
+  // Geste « retour » du téléphone : comme Échap, puis il écarte la question et rend le formulaire
+  useBackClose(() => {
+    if (busy) return
+    if (asking) back()
+    else leave()
+  })
 
   const saveAndClose = async () => {
     setAsking(false)

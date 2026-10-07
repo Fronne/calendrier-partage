@@ -1,6 +1,6 @@
 import { Hono, type Context } from 'hono'
 import { parseLocal } from '../shared/recurrence'
-import { BOTH, CATEGORIES, displayTitle, eventIcon, FREQS, type CalEvent, type Freq, type Member, type SyncData } from '../shared/types'
+import { BOTH, displayTitle, eventIcon, FREQS, isCategory, type CalEvent, type Freq, type Member, type SyncData } from '../shared/types'
 import { codeMatches, makeToken, verifyToken } from './auth'
 import { allEvents, allMembers, allTasks, getMeta, rowToEvent } from './db'
 import type { Env } from './env'
@@ -216,7 +216,7 @@ async function cleanEvent(env: Env, b: any, members?: Member[]) {
     rec_until: !birthday && repeat.rec_freq !== 'none' && DATE.test(b.rec_until) ? (b.rec_until as string) : null,
     exdates: JSON.stringify(Array.isArray(b.exdates) ? b.exdates.filter((d: unknown) => typeof d === 'string' && DATE.test(d)).slice(0, 500) : []),
     ...cleanReminder(b),
-    category: CATEGORIES.some((cat) => cat.id === b.category) ? (b.category as string) : '',
+    category: isCategory(b.category) ? (b.category as string) : '',
     kind: birthday ? 'birthday' : 'event',
     birth_year: birthday && birthYear >= 1900 && birthYear <= 2100 ? birthYear : null,
   }

@@ -3,7 +3,7 @@ import { displayTitle, eventIcon, type CalEvent, type Occurrence, type Task } fr
 import { colorOf, tint } from '../colors'
 import Icon from '../components/Icon'
 import { DayItems, DayNote, Empty } from '../components/Items'
-import { addDays, fmtLongDay, fmtRange, minutesOf, mondayOf, occurrencesByDay, todayKey } from '../dates'
+import { addDays, fmtLongDay, fmtRange, isoWeek, minutesOf, mondayOf, occurrencesByDay, todayKey } from '../dates'
 import { useStore } from '../store'
 
 interface Props {
@@ -12,6 +12,8 @@ interface Props {
   selectedDay: string
   onSelectDay: (day: string) => void
   onNewEvent: (day: string, time: string) => void
+  /** Affiche le numéro de la semaine à côté de ses dates */
+  weekNums: boolean
 }
 
 const WEEKDAYS = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
@@ -54,7 +56,7 @@ function layout(occs: Occurrence[], day: string) {
   return { allDay, blocks, lanes: Math.max(1, laneEnds.length) }
 }
 
-export default function WeekView({ events, tasks, selectedDay, onSelectDay, onNewEvent }: Props) {
+export default function WeekView({ events, tasks, selectedDay, onSelectDay, onNewEvent, weekNums }: Props) {
   const { members, dayInfo, openEvent, openTask } = useStore()
   const scroller = useRef<HTMLDivElement>(null)
   const touchX = useRef<number | null>(null)
@@ -94,6 +96,7 @@ export default function WeekView({ events, tasks, selectedDay, onSelectDay, onNe
         <label className="pick">
           <strong>
             {fmtRange(days[0], days[6])}
+            {weekNums && <span className="week-no" aria-label={`Semaine ${isoWeek(monday)}`}> · S{isoWeek(monday)}</span>}
             <Icon name="down" size={16} className="caret" />
           </strong>
           <input type="date" aria-label="Choisir une date" value={selectedDay} onChange={(e) => e.target.value && onSelectDay(e.target.value)} />

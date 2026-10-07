@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react'
 import { createPortal } from 'react-dom'
+import { useBackClose } from '../back'
 
 const pad = (n: number) => String(n).padStart(2, '0')
 
@@ -67,6 +68,7 @@ function Clock({ value, label, onPick, onClose }: ClockProps) {
   const press = useRef<{ x: number; y: number; moved: boolean } | null>(null)
 
   useEffect(() => face.current?.focus(), [])
+  useBackClose(onClose)
 
   const read = (e: PointerEvent<SVGSVGElement>) => {
     const box = e.currentTarget.getBoundingClientRect()

@@ -32,6 +32,17 @@ export function monthGrid(monthDay: string): string[] {
 /** Lundi de la semaine qui contient ce jour. */
 export const mondayOf = (day: string) => addDays(day, -((parseLocal(day).getUTCDay() + 6) % 7))
 
+/** Numéro de semaine ISO : semaines du lundi au dimanche, la première est celle du premier jeudi de l'année. */
+export function isoWeek(day: string): number {
+  const thursday = parseLocal(addDays(mondayOf(day), 3))
+  return Math.floor((thursday.getTime() - Date.UTC(thursday.getUTCFullYear(), 0, 1)) / (7 * DAY)) + 1
+}
+
+const WEEKNUMS_KEY = 'cal.weeknums'
+/** Numéros de semaine affichés dans le calendrier : réglage de ce téléphone. */
+export const getWeekNums = () => localStorage.getItem(WEEKNUMS_KEY) === '1'
+export const saveWeekNums = (on: boolean) => (on ? localStorage.setItem(WEEKNUMS_KEY, '1') : localStorage.removeItem(WEEKNUMS_KEY))
+
 /** Minutes écoulées depuis minuit pour 'YYYY-MM-DDTHH:mm'. */
 export const minutesOf = (local: string) => Number(local.slice(11, 13)) * 60 + Number(local.slice(14, 16))
 

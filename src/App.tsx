@@ -7,7 +7,8 @@ import EventForm from './components/EventForm'
 import Icon from './components/Icon'
 import Login from './components/Login'
 import TaskForm from './components/TaskForm'
-import { fmtShortDay, fmtToday, todayKey } from './dates'
+import { fmtShortDay, fmtToday, getWeekNums, saveWeekNums, todayKey } from './dates'
+import { useBackClose } from './back'
 import { dayInfoFor, getZone, saveZone, useSchoolHolidays } from './holidays'
 import { disablePush } from './push'
 import { StoreCtx, type Store } from './store'
@@ -64,7 +65,10 @@ function Calendar({ onLogout }: { onLogout: () => void }) {
   const [query, setQuery] = useState<string | null>(null)
   const [toast, setToast] = useState<{ text: string; undo?: () => void } | null>(null)
   const [zone, setZone] = useState(getZone)
+  const [weekNums, setWeekNums] = useState(getWeekNums)
   const periods = useSchoolHolidays(zone)
+  // Le geste « retour » du téléphone referme la recherche au lieu de quitter l'application
+  useBackClose(() => setQuery(null), query !== null)
 
   // Le bouton « + » du widget Android ouvre l'application sur un nouveau rendez-vous (/?new=1)
   useEffect(() => {
@@ -121,6 +125,10 @@ function Calendar({ onLogout }: { onLogout: () => void }) {
   const chooseView = (v: CalView) => {
     localStorage.setItem(VIEW_KEY, v)
     setCalView(v)
+  }
+  const chooseWeekNums = (on: boolean) => {
+    saveWeekNums(on)
+    setWeekNums(on)
   }
   const chooseZone = (z: string) => {
     saveZone(z)
@@ -199,7 +207,7 @@ function Calendar({ onLogout }: { onLogout: () => void }) {
             <SearchView query={query} events={data.events} tasks={data.tasks} />
           ) : (
             <>
-              {tab === 'month' && calView === 'month' && <MonthView events={events} tasks={tasks} selectedDay={selectedDay} onSelectDay={setSelectedDay} />}
+              {tab === 'month' && calView === 'month' && <MonthView events={events} tasks={tasks} selectedDay={selectedDay} onSelectDay={setSelectedDay} weekNums={weekNums} />}
               {tab === 'month' && calView === 'week' && (
                 <WeekView
                   events={events}
@@ -207,6 +215,7 @@ function Calendar({ onLogout }: { onLogout: () => void }) {
                   selectedDay={selectedDay}
                   onSelectDay={setSelectedDay}
                   onNewEvent={(day, time) => setEditing({ kind: 'event', day, time })}
+                  weekNums={weekNums}
                 />
               )}
               {tab === 'agenda' && <AgendaView events={events} tasks={tasks} />}
@@ -216,6 +225,8 @@ function Calendar({ onLogout }: { onLogout: () => void }) {
                   data={data}
                   zone={zone}
                   onZone={chooseZone}
+                  weekNums={weekNums}
+                  onWeekNums={chooseWeekNums}
                   onLogout={async () => {
                     await disablePush().catch(() => {})
                     onLogout()
