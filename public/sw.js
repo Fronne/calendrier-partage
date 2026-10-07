@@ -51,7 +51,7 @@ self.addEventListener('push', (event) => {
     data = event.data ? event.data.json() : {}
   } catch {}
   event.waitUntil(
-    self.registration.showNotification(data.title || 'Calendrier partagé', {
+    self.registration.showNotification(data.title || 'Calendrier', {
       body: data.body || '',
       tag: data.tag,
       icon: '/icon-192.png',

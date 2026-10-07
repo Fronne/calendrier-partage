@@ -6,7 +6,7 @@ import { allEvents, allMembers, allTasks, getMeta, rowToEvent } from './db'
 import type { Env } from './env'
 import { schoolHolidays, ZONE_ACADEMY } from './holidays'
 import { deliver, runReminders, type SubRow } from './reminders'
-import { widgetData } from './widget'
+import { widgetData, widgetMonth } from './widget'
 
 const MAX_MEMBERS = 2
 const MAX_LOGIN_FAILS = 10
@@ -16,6 +16,7 @@ const DATE = /^\d{4}-\d{2}-\d{2}$/
 const DATETIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/
 const COLOR = /^#[0-9a-fA-F]{6}$/
 const TIME = /^([01]\d|2[0-3]):[0-5]\d$/
+const MONTH = /^\d{4}-(0[1-9]|1[0-2])$/
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 
 class HttpError extends Error {
@@ -112,6 +113,14 @@ app.get('/api/widget', async (c) => {
   const [members, events, tasks] = await Promise.all([allMembers(c.env), allEvents(c.env), allTasks(c.env)])
   if (!members.some((m) => m.id === c.get('memberId'))) throw new HttpError(401, 'Reconnectez-vous.')
   return c.json(widgetData(c.env.TZ_NAME, members, events, tasks))
+})
+
+app.get('/api/widget/month', async (c) => {
+  const month = c.req.query('month') ?? ''
+  if (!MONTH.test(month)) throw bad('Mois invalide.')
+  const [members, events, tasks] = await Promise.all([allMembers(c.env), allEvents(c.env), allTasks(c.env)])
+  if (!members.some((m) => m.id === c.get('memberId'))) throw new HttpError(401, 'Reconnectez-vous.')
+  return c.json(widgetMonth(month, members, events, tasks))
 })
 
 app.put('/api/me', async (c) => {
@@ -424,7 +433,7 @@ app.post('/api/push/test', async (c) => {
   const subs = (
     await c.env.DB.prepare('SELECT * FROM push_subscriptions WHERE member_id = ?').bind(c.get('memberId')).all<SubRow>()
   ).results
-  const sent = await deliver(c.env, subs, { title: 'Calendrier partagé', body: 'Les rappels fonctionnent sur ce téléphone.', tag: 'test' })
+  const sent = await deliver(c.env, subs, { title: 'Calendrier', body: 'Les rappels fonctionnent sur ce téléphone.', tag: 'test' })
   return c.json({ sent, total: subs.length })
 })
 

@@ -1,4 +1,4 @@
-// Dessine l'icône de l'application (un petit calendrier) et l'écrit en PNG, sans dépendance.
+// Dessine l'icône de l'application (une page de calendrier et deux pastilles qui se recouvrent) et l'écrit en PNG, sans dépendance.
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { deflateSync } from 'node:zlib'
@@ -6,8 +6,10 @@ import { deflateSync } from 'node:zlib'
 const BG = [79, 70, 229]
 const WHITE = [255, 255, 255]
 const HEADER = [244, 63, 94]
-const DOT = [199, 210, 254]
-const DOT_ON = [79, 70, 229]
+// Les deux personnes, et ce qu'elles partagent là où les pastilles se recouvrent
+const ONE = [37, 99, 235]
+const OTHER = [225, 29, 72]
+const SHARED = [124, 58, 237]
 
 const inRound = (x, y, x0, y0, x1, y1, r) => {
   if (x < x0 || x > x1 || y < y0 || y > y1) return false
@@ -20,13 +22,12 @@ const inRound = (x, y, x0, y0, x1, y1, r) => {
 function colorAt(x, y) {
   if (!inRound(x, y, 0.22, 0.24, 0.78, 0.78, 0.07)) return BG
   if (y < 0.38) return HEADER
-  for (let row = 0; row < 2; row++) {
-    for (let col = 0; col < 3; col++) {
-      const cx = 0.34 + col * 0.16
-      const cy = 0.5 + row * 0.15
-      if ((x - cx) ** 2 + (y - cy) ** 2 <= 0.045 ** 2) return row === 1 && col === 1 ? DOT_ON : DOT
-    }
-  }
+  const inDot = (cx) => (x - cx) ** 2 + (y - 0.58) ** 2 <= 0.11 ** 2
+  const one = inDot(0.425)
+  const other = inDot(0.575)
+  if (one && other) return SHARED
+  if (one) return ONE
+  if (other) return OTHER
   return WHITE
 }
 
@@ -49,7 +50,8 @@ const chunk = (type, data) => {
   return Buffer.concat([len, body, crc])
 }
 
-function png(size) {
+// `scale` < 1 rétrécit le dessin autour du centre, le fond remplissant le reste
+function png(size, scale = 1) {
   const SS = 3 // suréchantillonnage pour des bords lisses
   const raw = Buffer.alloc(size * (size * 3 + 1))
   for (let py = 0; py < size; py++) {
@@ -58,7 +60,8 @@ function png(size) {
       const sum = [0, 0, 0]
       for (let sy = 0; sy < SS; sy++) {
         for (let sx = 0; sx < SS; sx++) {
-          const c = colorAt((px + (sx + 0.5) / SS) / size, (py + (sy + 0.5) / SS) / size)
+          const at = (p, s) => 0.5 + ((p + (s + 0.5) / SS) / size - 0.5) / scale
+          const c = colorAt(at(px, sx), at(py, sy))
           sum[0] += c[0]
           sum[1] += c[1]
           sum[2] += c[2]
@@ -79,17 +82,18 @@ function png(size) {
   ])
 }
 
-// Android : le même dessin sert d'avant-plan à l'icône (432 px = 108 dp en xxxhdpi) et d'écran de démarrage
+// Android : le même dessin sert d'avant-plan à l'icône (432 px = 108 dp en xxxhdpi) et d'écran de démarrage.
+// L'avant-plan est rétréci pour tenir en entier dans les icônes rondes de certains téléphones.
 const ANDROID = 'android/app/src/main/res/drawable-nodpi'
 const files = [
   ['public/icon-192.png', 192],
   ['public/icon-512.png', 512],
   ['public/apple-touch-icon.png', 180],
-  [`${ANDROID}/ic_launcher_foreground.png`, 432],
+  [`${ANDROID}/ic_launcher_foreground.png`, 432, 0.78],
   [`${ANDROID}/splash.png`, 512],
 ]
-for (const [path, size] of files) {
+for (const [path, size, scale] of files) {
   mkdirSync(dirname(path), { recursive: true })
-  writeFileSync(path, png(size))
+  writeFileSync(path, png(size, scale))
   console.log(path)
 }

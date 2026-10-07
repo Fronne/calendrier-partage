@@ -111,7 +111,7 @@ export default function SettingsView({ data, zone, onZone, onLogout }: Props) {
       const url = window.location.origin
       // Le code de couple ne voyage pas avec le lien : il se donne de vive voix
       if (navigator.share) {
-        await navigator.share({ title: 'Calendrier partagé', url }).catch(() => {})
+        await navigator.share({ title: 'Calendrier', url }).catch(() => {})
         return
       }
       await navigator.clipboard.writeText(url)

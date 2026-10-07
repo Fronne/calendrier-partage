@@ -47,7 +47,7 @@ export default function Login({ onDone }: { onDone: (token: string) => void }) {
   return (
     <div className="login">
       <img src="/icon-192.png" alt="" width="84" height="84" />
-      <h1>Calendrier partagé</h1>
+      <h1>Calendrier</h1>
 
       {!check ? (
         <form onSubmit={checkCode}>

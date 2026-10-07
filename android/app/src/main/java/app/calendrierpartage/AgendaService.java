@@ -61,6 +61,7 @@ public class AgendaService extends RemoteViewsService {
                 Api.setToken(context, null);
                 rows = new ArrayList<>();
                 AgendaWidget.updateAll(context);
+                MonthWidget.updateAll(context);
                 return;
             }
             // Sans réseau, on garde ce qu'on avait reçu la dernière fois

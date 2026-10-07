@@ -18,6 +18,7 @@ import java.util.Locale;
 /** Widget « À venir » : la date du jour, puis la liste fournie par AgendaService. */
 public class AgendaWidget extends AppWidgetProvider {
     private static final String ACTION_REFRESH = "app.calendrierpartage.REFRESH";
+    private static final int IMMUTABLE = PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE;
     private static final DateTimeFormatter LONG_DAY = DateTimeFormatter.ofPattern("EEEE d MMMM", Locale.FRENCH);
 
     /** « Mercredi 7 octobre » */
@@ -57,22 +58,31 @@ public class AgendaWidget extends AppWidgetProvider {
         views.setRemoteAdapter(R.id.list, service);
         views.setEmptyView(R.id.list, R.id.empty);
 
-        int immutable = PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE;
-        Intent app = new Intent(context, LauncherActivity.class).setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        Intent setup = new Intent(context, WidgetSetupActivity.class).setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        PendingIntent open = PendingIntent.getActivity(context, 0, connected ? app : setup, immutable);
-        views.setOnClickPendingIntent(R.id.header, open);
-        views.setOnClickPendingIntent(R.id.empty, open);
+        views.setOnClickPendingIntent(R.id.header, open(context));
+        views.setOnClickPendingIntent(R.id.empty, open(context));
         // Les lignes de la liste complètent ce modèle, qui doit donc rester modifiable
         views.setPendingIntentTemplate(R.id.list,
-                PendingIntent.getActivity(context, 1, app, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_MUTABLE));
-
-        Intent add = new Intent(Intent.ACTION_VIEW, Uri.parse(context.getString(R.string.launch_url) + "?new=1"),
-                context, LauncherActivity.class).setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        views.setOnClickPendingIntent(R.id.add, PendingIntent.getActivity(context, 2, add, immutable));
+                PendingIntent.getActivity(context, 1, app(context), PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_MUTABLE));
+        views.setOnClickPendingIntent(R.id.add, add(context));
 
         Intent refresh = new Intent(context, AgendaWidget.class).setAction(ACTION_REFRESH);
-        views.setOnClickPendingIntent(R.id.refresh, PendingIntent.getBroadcast(context, 0, refresh, immutable));
+        views.setOnClickPendingIntent(R.id.refresh, PendingIntent.getBroadcast(context, 0, refresh, IMMUTABLE));
         return views;
+    }
+
+    private static Intent app(Context context) {
+        return new Intent(context, LauncherActivity.class).setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+    }
+
+    /** Ouvre l'application, ou l'écran de connexion du widget tant qu'il n'est pas connecté. */
+    static PendingIntent open(Context context) {
+        Intent setup = new Intent(context, WidgetSetupActivity.class).setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        return PendingIntent.getActivity(context, 0, Api.token(context) != null ? app(context) : setup, IMMUTABLE);
+    }
+
+    /** Ouvre l'application sur un nouveau rendez-vous. */
+    static PendingIntent add(Context context) {
+        Intent add = app(context).setAction(Intent.ACTION_VIEW).setData(Uri.parse(context.getString(R.string.launch_url) + "?new=1"));
+        return PendingIntent.getActivity(context, 2, add, IMMUTABLE);
     }
 }

@@ -53,7 +53,7 @@ export default function App() {
 }
 
 function Calendar({ onLogout }: { onLogout: () => void }) {
-  const { data, offline, pending, mutate, refresh } = useSync(onLogout)
+  const { data, offline, stuck, pending, mutate, refresh } = useSync(onLogout)
   const [tab, setTab] = useState<Tab>('month')
   const [calView, setCalView] = useState<CalView>(() => (localStorage.getItem(VIEW_KEY) === 'week' ? 'week' : 'month'))
   const [filter, setFilter] = useState('all')
@@ -176,6 +176,12 @@ function Calendar({ onLogout }: { onLogout: () => void }) {
           )}
         </header>
 
+        {!offline && stuck && pending > 0 && (
+          <div className="banner">
+            {pending} modification{pending > 1 ? 's' : ''} pas encore enregistrée{pending > 1 ? 's' : ''} sur le serveur ({stuck}). Nouvel essai
+            automatique ; ne vous déconnectez pas, elles seraient perdues.
+          </div>
+        )}
         {offline && (
           <div className="banner">
             Hors ligne.

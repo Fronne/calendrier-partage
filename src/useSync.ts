@@ -26,6 +26,8 @@ export function useSync(onUnauthorized: () => void) {
   const [server, setServer] = useState<SyncData | null>(() => stored(CACHE_KEY, null))
   const [queue, setQueueState] = useState<Op[]>(() => stored(QUEUE_KEY, []))
   const [offline, setOffline] = useState(false)
+  // Raison pour laquelle la file d'attente n'avance plus, alors même que le serveur répond
+  const [stuck, setStuck] = useState<string | null>(null)
   const lastJson = useRef('')
   const queueRef = useRef(queue)
   const flushing = useRef<Promise<void> | null>(null)
@@ -49,12 +51,16 @@ export function useSync(onUnauthorized: () => void) {
           const status = e instanceof ApiError ? e.status : 0
           if (status === 401) return onUnauthorized()
           // Pas de réseau ou serveur en panne : on garde tout et on réessaiera
-          if (status === 0 || status === 429 || status >= 500) return setOffline(true)
+          if (status === 0 || status === 429 || status >= 500) {
+            setStuck(status ? `erreur ${status}` : 'envoi impossible')
+            return setOffline(true)
+          }
           // Refusée par le serveur (ex. élément supprimé entre-temps) : inutile d'insister
           rejected.current.set(op.id, e as ApiError)
         }
         saveQueue(queueRef.current.filter((o) => o.id !== op.id))
       }
+      setStuck(null)
     })()
     flushing.current = run
     // Libéré après coup, et jamais pendant l'exécution : une file vide se termine avant même l'affectation ci-dessus
@@ -119,5 +125,5 @@ export function useSync(onUnauthorized: () => void) {
 
   const data = useMemo(() => (server ? queue.reduce(applyOp, server) : null), [server, queue])
 
-  return { data, offline, pending: queue.length, refresh, mutate }
+  return { data, offline, stuck, pending: queue.length, refresh, mutate }
 }

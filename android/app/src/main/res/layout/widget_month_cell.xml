@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="0dp"
+    android:layout_height="match_parent"
+    android:layout_weight="1"
+    android:gravity="center"
+    android:orientation="vertical">
+
+    <TextView
+        android:id="@+id/num"
+        android:layout_width="22dp"
+        android:layout_height="22dp"
+        android:gravity="center"
+        android:textColor="@color/fg"
+        android:textSize="12sp" />
+
+    <!-- Une pastille par rendez-vous ou tâche du jour, à la couleur de la personne -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="5dp"
+        android:layout_marginTop="1dp"
+        android:orientation="horizontal">
+
+        <ImageView
+            android:id="@+id/dot1"
+            android:layout_width="5dp"
+            android:layout_height="5dp"
+            android:layout_marginStart="1dp"
+            android:layout_marginEnd="1dp"
+            android:importantForAccessibility="no"
+            android:src="@drawable/widget_dot"
+            android:visibility="gone" />
+
+        <ImageView
+            android:id="@+id/dot2"
+            android:layout_width="5dp"
+            android:layout_height="5dp"
+            android:layout_marginStart="1dp"
+            android:layout_marginEnd="1dp"
+            android:importantForAccessibility="no"
+            android:src="@drawable/widget_dot"
+            android:visibility="gone" />
+
+        <ImageView
+            android:id="@+id/dot3"
+            android:layout_width="5dp"
+            android:layout_height="5dp"
+            android:layout_marginStart="1dp"
+            android:layout_marginEnd="1dp"
+            android:importantForAccessibility="no"
+            android:src="@drawable/widget_dot"
+            android:visibility="gone" />
+    </LinearLayout>
+</LinearLayout>

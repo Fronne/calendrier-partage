@@ -67,6 +67,7 @@ public class WidgetSetupActivity extends Activity {
 
     private void done() {
         AgendaWidget.updateAll(this);
+        MonthWidget.updateAll(this);
         setResult(RESULT_OK, result());
         finish();
     }

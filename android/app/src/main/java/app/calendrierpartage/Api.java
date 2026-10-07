@@ -92,6 +92,15 @@ final class Api {
         prefs(context).edit().putString(TOKEN, token).remove(DATA).apply();
     }
 
+    static String get(Context context, String key) {
+        return prefs(context).getString(key, null);
+    }
+
+    /** Une valeur nulle efface la clé. */
+    static void put(Context context, String key, String value) {
+        prefs(context).edit().putString(key, value).apply();
+    }
+
     static String data(Context context) {
         return prefs(context).getString(DATA, null);
     }
