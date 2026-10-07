@@ -7,7 +7,7 @@ import Choice from './Choice'
 import { repeatKey, REPEATS } from './EventForm'
 import OwnerPicker from './OwnerPicker'
 import ReminderPicker, { NO_REMINDER, reminderFrom, type Reminder } from './ReminderPicker'
-import Sheet from './Sheet'
+import Sheet, { FormError } from './Sheet'
 
 interface Props {
   task?: Task
@@ -73,7 +73,8 @@ export default function TaskForm({ task, onClose }: Props) {
 
   return (
     <Sheet title={task ? 'Tâche' : 'Nouvelle tâche'} busy={busy} dirty={dirty} onClose={onClose} onSubmit={save}>
-      <input className="title-input" placeholder="À faire…" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={200} autoFocus={!task} />
+      <input className="title-input" placeholder="À faire…" aria-label="Tâche" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={200} autoFocus={!task} />
+      <FormError text={error} />
 
       <div className="group">
       <label className="row">
@@ -94,8 +95,6 @@ export default function TaskForm({ task, onClose }: Props) {
         <span className="label">Pour qui</span>
         <OwnerPicker value={owner} members={members} onChange={setOwner} />
       </div>
-
-      {error && <p className="error">{error}</p>}
 
       {task && (
         <button type="button" className="danger" disabled={busy} onClick={remove}>

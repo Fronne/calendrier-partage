@@ -9,7 +9,6 @@ import android.content.Intent;
 import android.net.Uri;
 import android.widget.RemoteViews;
 
-import com.google.androidbrowserhelper.trusted.LauncherActivity;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -71,7 +70,7 @@ public class AgendaWidget extends AppWidgetProvider {
     }
 
     private static Intent app(Context context) {
-        return new Intent(context, LauncherActivity.class).setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        return new Intent(context, MainActivity.class).setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
     }
 
     /** Ouvre l'application, ou l'écran de connexion du widget tant qu'il n'est pas connecté. */

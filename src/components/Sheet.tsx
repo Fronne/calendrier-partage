@@ -1,4 +1,4 @@
-import { useRef, useState, type FormEvent, type ReactNode, type TouchEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode, type TouchEvent } from 'react'
 import { createPortal } from 'react-dom'
 
 // Glissement vers le bas : distance avant qu'il s'engage, puis distance ou vitesse (px/ms) qui ferme le panneau
@@ -16,6 +16,20 @@ interface Props {
   /** Renvoie false (tout de suite ou plus tard) quand rien n'a été enregistré */
   onSubmit: () => unknown
   children: ReactNode
+}
+
+/** Message d'erreur d'un formulaire : annoncé aux lecteurs d'écran et amené à l'écran s'il est hors de vue. */
+export function FormError({ text }: { text: string }) {
+  const el = useRef<HTMLParagraphElement>(null)
+  useEffect(() => {
+    el.current?.scrollIntoView({ block: 'nearest' })
+  }, [text])
+  if (!text) return null
+  return (
+    <p ref={el} className="error" role="alert">
+      {text}
+    </p>
+  )
 }
 
 /** Panneau de saisie qui monte du bas de l'écran ; on le referme aussi en le tirant vers le bas. */
@@ -90,6 +104,11 @@ export default function Sheet({ title, busy, dirty, onClose, onSubmit, children 
     else window.setTimeout(onClose, SETTLE_MS)
   }
 
+  // Échap ferme le panneau, sauf si la touche vient de l'horloge ou d'une liste ouverte par-dessus
+  const escape = (e: KeyboardEvent) => {
+    if (e.key === 'Escape' && !busy && sheet.current?.contains(e.target as Node)) leave()
+  }
+
   const back = () => {
     setAsking(false)
     settle(0)
@@ -106,6 +125,10 @@ export default function Sheet({ title, busy, dirty, onClose, onSubmit, children 
       <form
         ref={sheet}
         className="sheet"
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        onKeyDown={escape}
         onClick={(e) => e.stopPropagation()}
         onSubmit={submit}
         onTouchStart={start}

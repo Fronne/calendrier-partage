@@ -9,7 +9,7 @@ import { useStore } from '../store'
 import Choice from './Choice'
 import OwnerPicker from './OwnerPicker'
 import ReminderPicker, { forAllDay, reminderFrom, type Reminder } from './ReminderPicker'
-import Sheet from './Sheet'
+import Sheet, { FormError } from './Sheet'
 import TimeInput from './TimeInput'
 
 interface Props {
@@ -208,10 +208,10 @@ export default function EventForm({ event, occ, day, time, onClose }: Props) {
     <Sheet title={heading} busy={busy} dirty={dirty} onClose={onClose} onSubmit={save}>
       {!event && (
         <div className="segmented">
-          <button type="button" className={!birthday ? 'on accent' : ''} onClick={() => changeKind('event')}>
+          <button type="button" className={!birthday ? 'on accent' : ''} aria-pressed={!birthday} onClick={() => changeKind('event')}>
             Rendez-vous
           </button>
-          <button type="button" className={birthday ? 'on accent' : ''} onClick={() => changeKind('birthday')}>
+          <button type="button" className={birthday ? 'on accent' : ''} aria-pressed={birthday} onClick={() => changeKind('birthday')}>
             🎂 Anniversaire
           </button>
         </div>
@@ -221,17 +221,18 @@ export default function EventForm({ event, occ, day, time, onClose }: Props) {
         <div className="field">
           <span className="label">Rendez-vous répété : modifier ou supprimer…</span>
           <div className="segmented">
-            <button type="button" className={one ? 'on accent' : ''} onClick={() => changeScope('one')}>
+            <button type="button" className={one ? 'on accent' : ''} aria-pressed={one} onClick={() => changeScope('one')}>
               Cette date
             </button>
-            <button type="button" className={!one ? 'on accent' : ''} onClick={() => changeScope('series')}>
+            <button type="button" className={!one ? 'on accent' : ''} aria-pressed={!one} onClick={() => changeScope('series')}>
               Toute la série
             </button>
           </div>
         </div>
       )}
 
-      <input className="title-input" placeholder={birthday ? 'Prénom' : 'Titre'} value={title} onChange={(e) => setTitle(e.target.value)} maxLength={200} autoFocus={!event} />
+      <input className="title-input" placeholder={birthday ? 'Prénom' : 'Titre'} aria-label={birthday ? 'Prénom' : 'Titre'} value={title} onChange={(e) => setTitle(e.target.value)} maxLength={200} autoFocus={!event} />
+      <FormError text={error} />
 
       {birthday ? (
         <div className="group">
@@ -284,7 +285,7 @@ export default function EventForm({ event, occ, day, time, onClose }: Props) {
           <div className="cats">
             {CATEGORIES.map((c) => (
               <button key={c.id} type="button" className={c.id === category ? 'cat on' : 'cat'} aria-pressed={c.id === category} onClick={() => setCategory(c.id === category ? '' : c.id)}>
-                <span className="ico">{c.icon}</span>
+                <span className="ico" aria-hidden="true">{c.icon}</span>
                 {c.label}
               </button>
             ))}
@@ -318,8 +319,6 @@ export default function EventForm({ event, occ, day, time, onClose }: Props) {
         )}
         <textarea placeholder={birthday ? 'Notes (idées de cadeau…)' : 'Notes'} aria-label="Notes" value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} maxLength={2000} />
       </div>
-
-      {error && <p className="error">{error}</p>}
 
       {event && (
         <button type="button" className="danger" disabled={busy} onClick={remove}>

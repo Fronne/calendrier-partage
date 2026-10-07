@@ -2,7 +2,9 @@
 <!-- Mêmes teintes que les jetons de src/styles.css -->
 <resources>
     <color name="brand">#4f46e5</color>
-    <color name="nav_bar">#ffffff</color>
+    <!-- Barres du téléphone : le fond du site (jeton bg de styles.css), en clair et en sombre -->
+    <color name="bars">#f4f3f9</color>
+    <color name="bars_dark">#0d0e14</color>
     <color name="bg">#f4f3f9</color>
     <color name="surface">#ffffff</color>
     <color name="fg">#191a24</color>

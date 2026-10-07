@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import type { Member } from '../../shared/types'
 import { api, errorText } from '../api'
-import { PALETTE } from '../colors'
+import { COLORS, PALETTE } from '../colors'
 
 interface CodeCheck {
   members: Member[]
@@ -52,7 +52,7 @@ export default function Login({ onDone }: { onDone: (token: string) => void }) {
       {!check ? (
         <form onSubmit={checkCode}>
           <p className="muted">Entrez le code que vous partagez tous les deux.</p>
-          <input type="password" placeholder="Code de couple" value={code} onChange={(e) => setCode(e.target.value)} autoComplete="off" autoFocus />
+          <input type="password" placeholder="Code de couple" aria-label="Code de couple" value={code} onChange={(e) => setCode(e.target.value)} autoComplete="current-password" autoFocus />
           <button className="primary" disabled={busy || !code}>
             Continuer
           </button>
@@ -73,10 +73,10 @@ export default function Login({ onDone }: { onDone: (token: string) => void }) {
               }}
             >
               <p className="muted">{check.members.length ? 'Ou créez votre profil :' : 'Créez votre profil :'}</p>
-              <input placeholder="Votre prénom" value={name} onChange={(e) => setName(e.target.value)} maxLength={30} />
+              <input placeholder="Votre prénom" aria-label="Votre prénom" autoComplete="given-name" value={name} onChange={(e) => setName(e.target.value)} maxLength={30} />
               <div className="swatches">
-                {PALETTE.map((c) => (
-                  <button key={c} type="button" aria-label={`Couleur ${c}`} className={c === color ? 'swatch on' : 'swatch'} style={{ background: c }} onClick={() => setColor(c)} />
+                {COLORS.map((c) => (
+                  <button key={c.hex} type="button" aria-label={c.name} aria-pressed={c.hex === color} className={c.hex === color ? 'swatch on' : 'swatch'} style={{ background: c.hex }} onClick={() => setColor(c.hex)} />
                 ))}
               </div>
               <button className="primary" disabled={busy || !name.trim()}>
@@ -87,7 +87,11 @@ export default function Login({ onDone }: { onDone: (token: string) => void }) {
         </div>
       )}
 
-      {error && <p className="error">{error}</p>}
+      {error && (
+        <p className="error" role="alert">
+          {error}
+        </p>
+      )}
     </div>
   )
 }

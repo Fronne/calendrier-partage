@@ -3,6 +3,7 @@ import { displayTitle, eventIcon, type Occurrence, type Task } from '../../share
 import { colorOf, nameOf, tint } from '../colors'
 import { fmtShortDay, occTimeLabel, todayKey } from '../dates'
 import { useStore } from '../store'
+import Icon from './Icon'
 
 export function EventRow({ occ, day }: { occ: Occurrence; day: string }) {
   const { members, openEvent } = useStore()
@@ -35,7 +36,7 @@ export function TaskRow({ task, showDue }: { task: Task; showDue?: boolean }) {
   return (
     <div className={task.done ? 'item done' : 'item'} style={tint(colorOf(task.owner, members))}>
       <button className={task.done ? 'check on' : 'check'} aria-label={task.done ? 'Marquer à faire' : 'Marquer comme fait'} onClick={() => toggleTask(task)}>
-        {task.done && '✓'}
+        {task.done && <Icon name="check" size={18} />}
       </button>
       <button className="grow plain" onClick={() => openTask(task)}>
         <span className="item-title">

@@ -8,12 +8,16 @@
   /* Fond en creux : champs, pistes d'interrupteur, zones secondaires */
   --surface-2: #eeedf6;
   --fg: #191a24;
-  --muted: #6b6d85;
+  --muted: #63657d;
   --line: #e5e4ef;
   --accent: #5b4fe9;
-  --accent-2: #8b5cf6;
+  --accent-2: #7c4ff0;
+  /* Texte posé sur la couleur d'accent */
+  --on-accent: #fff;
+  /* Bande que le navigateur peint tout en bas de l'écran dans l'application Android : on ne la choisit pas */
+  --chin: #fff;
   --accent-soft: #eceafe;
-  --danger: #e5484d;
+  --danger: #c92a30;
   --danger-soft: #fdecec;
   --warn-bg: #fff3d1;
   --warn-fg: #8a5a00;
@@ -40,6 +44,8 @@
   --line: #2a2c3a;
   --accent: #8f86ff;
   --accent-2: #b18cff;
+  --on-accent: #14122b;
+  --chin: #131314;
   --accent-soft: #25244c;
   --danger: #ff6b70;
   --danger-soft: #3a1c1f;
@@ -66,6 +72,8 @@
     --line: #2a2c3a;
     --accent: #8f86ff;
     --accent-2: #b18cff;
+    --on-accent: #14122b;
+    --chin: #131314;
     --accent-soft: #25244c;
     --danger: #ff6b70;
     --danger-soft: #3a1c1f;
@@ -92,7 +100,7 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--fg);
-  font: 16px/1.45 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font: 16px/1.5 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
   overscroll-behavior-y: none;
 }
@@ -110,6 +118,47 @@ button {
   border: 0;
   background: none;
   padding: 0;
+}
+
+/* Pas d'attente de double-toucher avant de réagir */
+a,
+button,
+input,
+label,
+textarea {
+  touch-action: manipulation;
+}
+
+/* Tout bouton répond au doigt, même sans effet propre */
+button:not(:disabled):active {
+  opacity: 0.72;
+}
+
+/* Petits boutons : la zone qui réagit au doigt fait au moins 44 px, sans changer leur taille à l'écran */
+.icon-btn,
+.chip,
+.month-head > button,
+.segmented.small button,
+.save,
+.time-btn,
+.choice {
+  position: relative;
+}
+
+.icon-btn::after,
+.chip::after,
+.month-head > button::after,
+.segmented.small button::after,
+.save::after,
+.time-btn::after,
+.choice::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: max(100%, 44px);
+  height: max(100%, 44px);
+  transform: translate(-50%, -50%);
 }
 
 button:disabled {
@@ -149,7 +198,7 @@ textarea:focus {
 input::placeholder,
 textarea::placeholder {
   color: var(--muted);
-  opacity: 0.8;
+  opacity: 1;
 }
 
 textarea {
@@ -167,8 +216,12 @@ p {
 }
 
 .error {
+  padding: 10px 14px;
+  border-radius: var(--r);
+  background: var(--danger-soft);
   color: var(--danger);
   font-size: 14px;
+  font-weight: 500;
 }
 
 .center {
@@ -246,8 +299,8 @@ p {
 
 .icon-btn {
   flex: none;
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   display: grid;
   place-items: center;
@@ -321,6 +374,25 @@ p {
   animation: rise-in 0.25s ease-out both;
 }
 
+/* Application Android : le bas de l'écran se fond dans la bande du navigateur, pour qu'aucune ligne ne les sépare */
+:root[data-shell='android'] body::after {
+  content: '';
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  /* Sous le menu et le bouton + : le fondu ne doit rien voiler */
+  z-index: 9;
+  height: calc(var(--nav-h) + var(--nav-gap));
+  background: linear-gradient(to bottom, transparent, var(--chin));
+  pointer-events: none;
+}
+
+/* Un formulaire ouvert recouvre ce fondu : il porte le sien, sous son contenu */
+:root[data-shell='android'] .sheet {
+  background: linear-gradient(to bottom, var(--bg) calc(100% - 56px), var(--chin));
+}
+
 /* Barre de navigation flottante */
 .bottomnav {
   position: fixed;
@@ -346,7 +418,7 @@ p {
   align-items: center;
   justify-content: center;
   gap: 3px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
   color: var(--muted);
 }
@@ -377,11 +449,10 @@ p {
   width: 58px;
   height: 58px;
   border-radius: 20px;
+  display: grid;
+  place-items: center;
   background: linear-gradient(135deg, var(--accent), var(--accent-2));
-  color: #fff;
-  font-size: 32px;
-  font-weight: 300;
-  line-height: 1;
+  color: var(--on-accent);
   box-shadow: 0 10px 24px color-mix(in srgb, var(--accent) 45%, transparent);
   transition: transform 0.12s;
 }
@@ -416,7 +487,9 @@ p {
   flex: none;
   color: #b5adff;
   font-weight: 700;
-  min-height: 32px;
+  min-height: 44px;
+  margin: -8px -8px -8px 0;
+  padding: 0 8px;
 }
 
 /* ==========================================================================
@@ -437,8 +510,8 @@ p {
   border-radius: 50%;
   background: var(--surface);
   box-shadow: var(--shadow-sm);
-  font-size: 22px;
-  line-height: 1;
+  display: grid;
+  place-items: center;
   color: var(--fg);
 }
 
@@ -466,8 +539,8 @@ p {
 
 /* Petite flèche : signale que le titre se touche pour choisir une date */
 .caret {
-  margin-left: 6px;
-  font-size: 0.75em;
+  margin-left: 4px;
+  vertical-align: -2px;
   color: var(--muted);
 }
 
@@ -539,7 +612,7 @@ p {
 }
 
 .cell.out {
-  opacity: 0.4;
+  opacity: 0.6;
 }
 
 /* Vacances scolaires : fond teinté ; jour férié : numéro en rouge */
@@ -565,7 +638,7 @@ p {
 .week-day.selected .num {
   background: linear-gradient(135deg, var(--accent), var(--accent-2));
   box-shadow: 0 4px 10px color-mix(in srgb, var(--accent) 40%, transparent);
-  color: #fff;
+  color: var(--on-accent);
   font-weight: 700;
 }
 
@@ -577,8 +650,8 @@ p {
   padding: 0 4px;
   border-radius: 6px;
   background: color-mix(in srgb, var(--c) var(--tint), var(--surface));
-  color: color-mix(in srgb, var(--c) 72%, var(--fg));
-  font-size: 10.5px;
+  color: color-mix(in srgb, var(--c) 60%, var(--fg));
+  font-size: 11px;
   font-weight: 600;
   line-height: 18px;
   text-align: left;
@@ -605,7 +678,7 @@ p {
 }
 
 .more {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
   line-height: 12px;
   color: var(--muted);
@@ -643,7 +716,7 @@ p {
 }
 
 .week-day small {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--muted);
 }
@@ -680,7 +753,7 @@ p {
   position: absolute;
   right: 4px;
   transform: translateY(-50%);
-  font-size: 10px;
+  font-size: 11px;
   color: var(--muted);
   background: var(--surface);
   padding: 0 2px;
@@ -704,8 +777,8 @@ p {
   background: color-mix(in srgb, var(--c) var(--tint), var(--surface));
   /* Liseré : sépare deux rendez-vous qui se recouvrent en cascade */
   box-shadow: 0 0 0 1px var(--surface);
-  color: color-mix(in srgb, var(--c) 72%, var(--fg));
-  font-size: 10px;
+  color: color-mix(in srgb, var(--c) 60%, var(--fg));
+  font-size: 11px;
   font-weight: 600;
   line-height: 12px;
   text-align: left;
@@ -811,7 +884,8 @@ button.item:active {
 
 .item .time {
   flex: none;
-  width: 48px;
+  /* Assez large pour « Journée » en gras */
+  width: 56px;
   display: flex;
   flex-direction: column;
   font-size: 13px;
@@ -871,10 +945,9 @@ button.item:active {
   margin: 0 7px;
   border-radius: 50%;
   box-shadow: inset 0 0 0 2px var(--c);
-  color: #fff;
-  font-size: 15px;
-  font-weight: 700;
-  line-height: 1;
+  display: grid;
+  place-items: center;
+  color: var(--on-c, #fff);
   transition: background 0.15s;
 }
 
@@ -903,9 +976,11 @@ button.item:active {
 }
 
 .fold {
-  display: block;
-  margin: 22px 4px 10px;
-  min-height: 32px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 16px 4px 4px;
+  min-height: 44px;
   font-size: 13px;
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -945,7 +1020,7 @@ button.item:active {
 
 .primary {
   background: linear-gradient(135deg, var(--accent), var(--accent-2));
-  color: #fff;
+  color: var(--on-accent);
   box-shadow: 0 6px 16px color-mix(in srgb, var(--accent) 30%, transparent);
 }
 
@@ -1004,7 +1079,7 @@ button.item:active {
 .segmented button.on {
   background: var(--c, var(--accent));
   box-shadow: 0 4px 12px color-mix(in srgb, var(--c, var(--accent)) 35%, transparent);
-  color: #fff;
+  color: var(--on-c, var(--on-accent));
   font-weight: 650;
 }
 
@@ -1027,6 +1102,7 @@ button.item:active {
   box-shadow: none;
   color: var(--muted);
   font-size: 14px;
+  overflow: visible;
 }
 
 .segmented.small button.on {
@@ -1078,8 +1154,8 @@ button.item:active {
 }
 
 .swatch {
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   transition: transform 0.12s;
 }
@@ -1175,7 +1251,7 @@ button.item:active {
   padding: 0 16px;
   border-radius: 999px;
   background: linear-gradient(135deg, var(--accent), var(--accent-2));
-  color: #fff;
+  color: var(--on-accent);
   font-weight: 650;
 }
 
@@ -1493,7 +1569,7 @@ button.item:active {
 }
 
 .clock-face .tick {
-  fill: #fff;
+  fill: var(--on-accent);
 }
 
 .clock-face text {
@@ -1511,7 +1587,7 @@ button.item:active {
 }
 
 .clock-face text.on {
-  fill: #fff;
+  fill: var(--on-accent);
 }
 
 .clock-actions {

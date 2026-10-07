@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, type MouseEvent } from 'react'
 import { displayTitle, eventIcon, type CalEvent, type Occurrence, type Task } from '../../shared/types'
 import { colorOf, tint } from '../colors'
+import Icon from '../components/Icon'
 import { DayItems, DayNote, Empty } from '../components/Items'
 import { addDays, fmtLongDay, fmtRange, minutesOf, mondayOf, occurrencesByDay, todayKey } from '../dates'
 import { useStore } from '../store'
@@ -90,12 +91,12 @@ export default function WeekView({ events, tasks, selectedDay, onSelectDay, onNe
   return (
     <>
       <div className="month-head">
-        <label className="pick" aria-label="Choisir une date">
+        <label className="pick">
           <strong>
             {fmtRange(days[0], days[6])}
-            <span className="caret">▾</span>
+            <Icon name="down" size={16} className="caret" />
           </strong>
-          <input type="date" value={selectedDay} onChange={(e) => e.target.value && onSelectDay(e.target.value)} />
+          <input type="date" aria-label="Choisir une date" value={selectedDay} onChange={(e) => e.target.value && onSelectDay(e.target.value)} />
         </label>
         {selectedDay !== today && (
           <button className="today-btn" onClick={() => onSelectDay(today)}>
@@ -103,10 +104,10 @@ export default function WeekView({ events, tasks, selectedDay, onSelectDay, onNe
           </button>
         )}
         <button aria-label="Semaine précédente" onClick={() => onSelectDay(addDays(selectedDay, -7))}>
-          ‹
+          <Icon name="left" />
         </button>
         <button aria-label="Semaine suivante" onClick={() => onSelectDay(addDays(selectedDay, 7))}>
-          ›
+          <Icon name="right" />
         </button>
       </div>
 
@@ -126,7 +127,14 @@ export default function WeekView({ events, tasks, selectedDay, onSelectDay, onNe
             const info = dayInfo(day)
             const cls = ['week-day', day === today && 'today', day === selectedDay && 'selected', info.holiday && 'holiday', info.vacation && 'vacation'].filter(Boolean).join(' ')
             return (
-              <button key={day} className={cls} onClick={() => onSelectDay(day)}>
+              <button
+                key={day}
+                className={cls}
+                aria-label={[fmtLongDay(day), info.holiday].filter(Boolean).join(', ')}
+                aria-current={day === today ? 'date' : undefined}
+                aria-pressed={day === selectedDay}
+                onClick={() => onSelectDay(day)}
+              >
                 <small>{WEEKDAYS[i]}</small>
                 <span className="num">{Number(day.slice(8))}</span>
               </button>

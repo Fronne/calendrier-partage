@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from 'react'
 import { displayTitle, eventIcon, type CalEvent, type Task } from '../../shared/types'
 import { colorOf, tint } from '../colors'
+import Icon from '../components/Icon'
 import { DayItems, DayNote, Empty } from '../components/Items'
 import { addMonths, fmtLongDay, fmtMonth, monthGrid, monthStart, occurrencesByDay, todayKey } from '../dates'
 import { useStore } from '../store'
@@ -43,12 +44,12 @@ export default function MonthView({ events, tasks, selectedDay, onSelectDay }: P
   return (
     <>
       <div className="month-head">
-        <label className="pick" aria-label="Choisir un mois">
+        <label className="pick">
           <strong>
             {fmtMonth(month)}
-            <span className="caret">▾</span>
+            <Icon name="down" size={16} className="caret" />
           </strong>
-          <input type="month" value={month.slice(0, 7)} onChange={(e) => e.target.value && select(e.target.value + '-01')} />
+          <input type="month" aria-label="Choisir un mois" value={month.slice(0, 7)} onChange={(e) => e.target.value && select(e.target.value + '-01')} />
         </label>
         {(selectedDay !== today || month !== monthStart(today)) && (
           <button className="today-btn" onClick={() => select(today)}>
@@ -56,10 +57,10 @@ export default function MonthView({ events, tasks, selectedDay, onSelectDay }: P
           </button>
         )}
         <button aria-label="Mois précédent" onClick={() => go(-1)}>
-          ‹
+          <Icon name="left" />
         </button>
         <button aria-label="Mois suivant" onClick={() => go(1)}>
-          ›
+          <Icon name="right" />
         </button>
       </div>
 
@@ -74,7 +75,7 @@ export default function MonthView({ events, tasks, selectedDay, onSelectDay }: P
         }}
       >
         {WEEKDAYS.map((d, i) => (
-          <span key={i} className="weekday">
+          <span key={i} className="weekday" aria-hidden="true">
             {d}
           </span>
         ))}
@@ -101,7 +102,14 @@ export default function MonthView({ events, tasks, selectedDay, onSelectDay }: P
             .filter(Boolean)
             .join(' ')
           return (
-            <button key={day} className={cls} onClick={() => select(day)}>
+            <button
+              key={day}
+              className={cls}
+              aria-label={[fmtLongDay(day), info.holiday, lines.length > 0 && `${lines.length} élément${lines.length > 1 ? 's' : ''}`].filter(Boolean).join(', ')}
+              aria-current={day === today ? 'date' : undefined}
+              aria-pressed={day === selectedDay}
+              onClick={() => select(day)}
+            >
               <span className="num">{Number(day.slice(8))}</span>
               {lines.slice(0, MAX_LINES).map((l) => (
                 <span key={l.key} className={l.task ? 'pill task' : 'pill'} style={tint(l.color)}>

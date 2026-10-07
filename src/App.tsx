@@ -4,6 +4,7 @@ import { BOTH, type CalEvent, type Occurrence, type Task } from '../shared/types
 import { errorText, getToken, setToken } from './api'
 import BottomNav, { type Tab } from './components/BottomNav'
 import EventForm from './components/EventForm'
+import Icon from './components/Icon'
 import Login from './components/Login'
 import TaskForm from './components/TaskForm'
 import { fmtShortDay, fmtToday, todayKey } from './dates'
@@ -54,7 +55,8 @@ export default function App() {
 
 function Calendar({ onLogout }: { onLogout: () => void }) {
   const { data, offline, stuck, pending, mutate, refresh } = useSync(onLogout)
-  const [tab, setTab] = useState<Tab>('month')
+  // L'application Android se rouvre sur les réglages après un changement de thème (/?reglages=1)
+  const [tab, setTab] = useState<Tab>(() => (new URLSearchParams(location.search).has('reglages') ? 'settings' : 'month'))
   const [calView, setCalView] = useState<CalView>(() => (localStorage.getItem(VIEW_KEY) === 'week' ? 'week' : 'month'))
   const [filter, setFilter] = useState('all')
   const [selectedDay, setSelectedDay] = useState(todayKey)
@@ -66,9 +68,10 @@ function Calendar({ onLogout }: { onLogout: () => void }) {
 
   // Le bouton « + » du widget Android ouvre l'application sur un nouveau rendez-vous (/?new=1)
   useEffect(() => {
-    if (!new URLSearchParams(location.search).has('new')) return
+    const params = new URLSearchParams(location.search)
+    if (!params.has('new') && !params.has('reglages')) return
     history.replaceState(null, '', location.pathname)
-    setEditing({ kind: 'event', day: todayKey() })
+    if (params.has('new')) setEditing({ kind: 'event', day: todayKey() })
   }, [])
 
   useEffect(() => {
@@ -130,7 +133,7 @@ function Calendar({ onLogout }: { onLogout: () => void }) {
         <header className="topbar">
           {searching ? (
             <div className="search-bar">
-              <input type="search" placeholder="Rechercher…" value={query} onChange={(e) => setQuery(e.target.value)} autoFocus />
+              <input type="search" placeholder="Rechercher…" aria-label="Rechercher" value={query} onChange={(e) => setQuery(e.target.value)} autoFocus />
               <button className="link" onClick={() => setQuery(null)}>
                 Fermer
               </button>
@@ -143,10 +146,10 @@ function Calendar({ onLogout }: { onLogout: () => void }) {
               </div>
               {tab === 'month' && (
                 <div className="segmented small">
-                  <button className={calView === 'month' ? 'on accent' : ''} onClick={() => chooseView('month')}>
+                  <button className={calView === 'month' ? 'on accent' : ''} aria-pressed={calView === 'month'} onClick={() => chooseView('month')}>
                     Mois
                   </button>
-                  <button className={calView === 'week' ? 'on accent' : ''} onClick={() => chooseView('week')}>
+                  <button className={calView === 'week' ? 'on accent' : ''} aria-pressed={calView === 'week'} onClick={() => chooseView('week')}>
                     Semaine
                   </button>
                 </div>
@@ -163,11 +166,11 @@ function Calendar({ onLogout }: { onLogout: () => void }) {
           )}
           {tab !== 'settings' && !searching && (
             <div className="chips">
-              <button className={filter === 'all' ? 'chip on' : 'chip'} onClick={() => setFilter('all')}>
+              <button className={filter === 'all' ? 'chip on' : 'chip'} aria-pressed={filter === 'all'} onClick={() => setFilter('all')}>
                 Tous
               </button>
               {store.members.map((m) => (
-                <button key={m.id} className={filter === m.id ? 'chip on' : 'chip'} onClick={() => setFilter(m.id)}>
+                <button key={m.id} className={filter === m.id ? 'chip on' : 'chip'} aria-pressed={filter === m.id} onClick={() => setFilter(m.id)}>
                   <span className="dot" style={{ background: m.color }} />
                   {m.name}
                 </button>
@@ -177,13 +180,13 @@ function Calendar({ onLogout }: { onLogout: () => void }) {
         </header>
 
         {!offline && stuck && pending > 0 && (
-          <div className="banner">
+          <div className="banner" role="status">
             {pending} modification{pending > 1 ? 's' : ''} pas encore enregistrée{pending > 1 ? 's' : ''} sur le serveur ({stuck}). Nouvel essai
             automatique ; ne vous déconnectez pas, elles seraient perdues.
           </div>
         )}
         {offline && (
-          <div className="banner">
+          <div className="banner" role="status">
             Hors ligne.
             {pending > 0
               ? ` ${pending} modification${pending > 1 ? 's' : ''} en attente, envoyée${pending > 1 ? 's' : ''} dès le retour du réseau.`
@@ -229,7 +232,7 @@ function Calendar({ onLogout }: { onLogout: () => void }) {
             aria-label={tab === 'tasks' ? 'Nouvelle tâche' : 'Nouveau rendez-vous'}
             onClick={() => setEditing(tab === 'tasks' ? { kind: 'task' } : { kind: 'event', day: tab === 'month' ? selectedDay : todayKey() })}
           >
-            +
+            <Icon name="plus" size={28} />
           </button>
         )}
 

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { BOTH, type Member, type SyncData } from '../../shared/types'
 import { api, errorText } from '../api'
-import { PALETTE } from '../colors'
+import { COLORS } from '../colors'
 import { todayKey } from '../dates'
 import { ZONES } from '../holidays'
 import { disablePush, enablePush, isIos, isStandalone, pushEnabled, pushSupported } from '../push'
@@ -127,8 +127,8 @@ export default function SettingsView({ data, zone, onZone, onLogout }: Props) {
         <h2>Mon profil</h2>
         <input value={name} onChange={(e) => setName(e.target.value)} maxLength={30} aria-label="Prénom" />
         <div className="swatches">
-          {PALETTE.map((c) => (
-            <button key={c} aria-label={`Couleur ${c}`} className={c === color ? 'swatch on' : 'swatch'} style={{ background: c }} onClick={() => setColor(c)} />
+          {COLORS.map((c) => (
+            <button key={c.hex} aria-label={c.name} aria-pressed={c.hex === color} className={c.hex === color ? 'swatch on' : 'swatch'} style={{ background: c.hex }} onClick={() => setColor(c.hex)} />
           ))}
         </div>
         <button className="primary" disabled={busy || !name.trim() || (name === me.name && color === me.color)} onClick={saveProfile}>
@@ -150,7 +150,7 @@ export default function SettingsView({ data, zone, onZone, onLogout }: Props) {
         <h2>Apparence</h2>
         <div className="segmented">
           {THEMES.map((t) => (
-            <button key={t.id} className={t.id === theme ? 'on accent' : ''} onClick={() => chooseTheme(t.id)}>
+            <button key={t.id} className={t.id === theme ? 'on accent' : ''} aria-pressed={t.id === theme} onClick={() => chooseTheme(t.id)}>
               {t.label}
             </button>
           ))}
@@ -195,11 +195,11 @@ export default function SettingsView({ data, zone, onZone, onLogout }: Props) {
         <p className="muted">Les jours fériés sont toujours affichés. Choisissez votre zone pour les vacances.</p>
         <div className="segmented">
           {ZONES.map((z) => (
-            <button key={z} className={z === zone ? 'on accent' : ''} onClick={() => onZone(z)}>
+            <button key={z} className={z === zone ? 'on accent' : ''} aria-pressed={z === zone} onClick={() => onZone(z)}>
               Zone {z}
             </button>
           ))}
-          <button className={zone === '' ? 'on accent' : ''} onClick={() => onZone('')}>
+          <button className={zone === '' ? 'on accent' : ''} aria-pressed={zone === ''} onClick={() => onZone('')}>
             Aucune
           </button>
         </div>
@@ -227,7 +227,11 @@ export default function SettingsView({ data, zone, onZone, onLogout }: Props) {
         />
       </section>
 
-      {message && <p className="notice">{message}</p>}
+      {message && (
+        <p className="notice" role="status">
+          {message}
+        </p>
+      )}
 
       <button className="danger" onClick={onLogout}>
         Se déconnecter

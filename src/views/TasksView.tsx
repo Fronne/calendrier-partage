@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { BOTH, type Task } from '../../shared/types'
 import { errorText } from '../api'
+import Icon from '../components/Icon'
 import { Empty, TaskRow } from '../components/Items'
 import { uid } from '../ops'
 import { useStore } from '../store'
@@ -33,7 +34,7 @@ export default function TasksView({ tasks }: { tasks: Task[] }) {
   return (
     <>
       <form className="quick-add" onSubmit={quickAdd}>
-        <input placeholder="Ajouter une tâche…" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={200} />
+        <input placeholder="Ajouter une tâche…" aria-label="Nouvelle tâche" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={200} />
         <button className="primary" disabled={!title.trim()}>
           Ajouter
         </button>
@@ -48,8 +49,9 @@ export default function TasksView({ tasks }: { tasks: Task[] }) {
 
       {done.length > 0 && (
         <>
-          <button className="fold" onClick={() => setShowDone(!showDone)}>
-            {showDone ? '▾' : '▸'} Terminées ({done.length})
+          <button className="fold" aria-expanded={showDone} onClick={() => setShowDone(!showDone)}>
+            <Icon name={showDone ? 'down' : 'right'} size={16} />
+            Terminées ({done.length})
           </button>
           {showDone && (
             <div className="items">

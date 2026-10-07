@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="nav_bar">#171923</color>
     <color name="bg">#0d0e14</color>
     <color name="surface">#171923</color>
     <color name="fg">#f1f1f6</color>

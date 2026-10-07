@@ -17,19 +17,32 @@
 
         <!-- L'application elle-même : le site, affiché en plein écran par le navigateur du téléphone -->
         <activity
-            android:name="com.google.androidbrowserhelper.trusted.LauncherActivity"
+            android:name=".MainActivity"
             android:alwaysRetainTaskState="true"
             android:exported="true"
             android:label="@string/app_short_name">
             <meta-data
                 android:name="android.support.customtabs.trusted.DEFAULT_URL"
                 android:value="@string/launch_url" />
+            <!-- Barres du téléphone (heure en haut, navigation en bas) à la couleur de fond du site, en clair comme en sombre -->
             <meta-data
                 android:name="android.support.customtabs.trusted.STATUS_BAR_COLOR"
-                android:resource="@color/brand" />
+                android:resource="@color/bars" />
+            <meta-data
+                android:name="android.support.customtabs.trusted.STATUS_BAR_COLOR_DARK"
+                android:resource="@color/bars_dark" />
             <meta-data
                 android:name="android.support.customtabs.trusted.NAVIGATION_BAR_COLOR"
-                android:resource="@color/nav_bar" />
+                android:resource="@color/bars" />
+            <meta-data
+                android:name="android.support.customtabs.trusted.NAVIGATION_BAR_COLOR_DARK"
+                android:resource="@color/bars_dark" />
+            <meta-data
+                android:name="android.support.customtabs.trusted.NAVIGATION_BAR_DIVIDER_COLOR"
+                android:resource="@color/bars" />
+            <meta-data
+                android:name="android.support.customtabs.trusted.NAVIGATION_BAR_DIVIDER_COLOR_DARK"
+                android:resource="@color/bars_dark" />
             <meta-data
                 android:name="android.support.customtabs.trusted.SPLASH_IMAGE_DRAWABLE"
                 android:resource="@drawable/splash" />
@@ -49,10 +62,6 @@
                 android:name="android.support.customtabs.trusted.DISPLAY_MODE"
                 android:value="standalone" />
 
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -60,6 +69,33 @@
                 <data
                     android:host="${host}"
                     android:scheme="https" />
+            </intent-filter>
+        </activity>
+
+        <!-- L'icône de l'application garde son ancien nom technique : elle reste en place sur l'écran d'accueil après la mise à jour -->
+        <activity-alias
+            android:name="com.google.androidbrowserhelper.trusted.LauncherActivity"
+            android:exported="true"
+            android:label="@string/app_short_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <!-- Thème choisi dans les réglages du site : retenu ici pour colorer la barre du bas (voir ThemeActivity) -->
+        <activity
+            android:name=".ThemeActivity"
+            android:exported="true"
+            android:noHistory="true">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:host="theme"
+                    android:scheme="calendrier" />
             </intent-filter>
         </activity>
 
