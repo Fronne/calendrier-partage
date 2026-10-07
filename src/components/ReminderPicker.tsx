@@ -1,3 +1,6 @@
+import Choice, { type Option } from './Choice'
+import TimeInput from './TimeInput'
+
 export interface Reminder {
   /** null = pas de rappel */
   minutes: number | null
@@ -59,30 +62,23 @@ export default function ReminderPicker({ value, timed, onChange }: Props) {
     onChange({ minutes: n * 1440, time: value.time ?? (n === 0 ? DEFAULT_SAME_DAY : DEFAULT_DAYS_BEFORE) })
   }
 
+  const options: Option[] = [
+    { value: '', label: 'Aucun' },
+    ...(timed ? RELATIVE.map((r) => ({ value: `m${r.minutes}`, label: r.label })) : []),
+    ...DAYS.map((d, i) => ({ value: `d${d.days}`, label: d.label, divider: i === 0 })),
+  ]
+
   return (
     <>
-      <label className="row">
+      <div className="row">
         <span>Rappel</span>
-        <select value={key} onChange={(e) => choose(e.target.value)}>
-          <option value="">Aucun</option>
-          {timed &&
-            RELATIVE.map((r) => (
-              <option key={r.minutes} value={`m${r.minutes}`}>
-                {r.label}
-              </option>
-            ))}
-          {DAYS.map((d) => (
-            <option key={d.days} value={`d${d.days}`}>
-              {d.label}
-            </option>
-          ))}
-        </select>
-      </label>
+        <Choice label="Rappel" value={key} options={options} onChange={choose} />
+      </div>
       {byDay && (
-        <label className="row">
+        <div className="row">
           <span>Heure du rappel</span>
-          <input type="time" value={value.time!} onChange={(e) => e.target.value && onChange({ minutes: value.minutes, time: e.target.value })} required />
-        </label>
+          <TimeInput label="Heure du rappel" value={value.time!} onChange={(time) => onChange({ minutes: value.minutes, time })} />
+        </div>
       )}
     </>
   )

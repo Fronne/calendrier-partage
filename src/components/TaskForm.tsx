@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { BOTH, type Task } from '../../shared/types'
 import { errorText } from '../api'
 import { uid } from '../ops'
 import { useStore } from '../store'
+import Choice from './Choice'
 import { repeatKey, REPEATS } from './EventForm'
 import OwnerPicker from './OwnerPicker'
 import ReminderPicker, { NO_REMINDER, reminderFrom, type Reminder } from './ReminderPicker'
@@ -23,6 +24,9 @@ export default function TaskForm({ task, onClose }: Props) {
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
 
+  const snapshot = JSON.stringify([title, due, owner, repeat, reminder])
+  const dirty = snapshot !== useRef(snapshot).current
+
   const run = async (fn: () => Promise<unknown>, done?: () => void) => {
     setBusy(true)
     setError('')
@@ -30,15 +34,23 @@ export default function TaskForm({ task, onClose }: Props) {
       await fn()
       onClose()
       done?.()
+      return true
     } catch (e) {
       setError(errorText(e))
       setBusy(false)
+      return false
     }
   }
 
+  const refuse = (message: string) => {
+    setError(message)
+    return false
+  }
+
+  /** Renvoie false si rien n'a été enregistré : le panneau, s'il avait été écarté d'un geste, revient. */
   const save = () => {
-    if (!title.trim()) return setError('Décrivez la tâche.')
-    if (!due && (repeat !== 'none' || reminder.minutes != null)) return setError('Choisissez une date pour répéter la tâche ou recevoir un rappel.')
+    if (!title.trim()) return refuse('Décrivez la tâche.')
+    if (!due && (repeat !== 'none' || reminder.minutes != null)) return refuse('Choisissez une date pour répéter la tâche ou recevoir un rappel.')
     const rep = REPEATS.find((r) => r.key === repeat) ?? REPEATS[0]
     const body = {
       title: title.trim(),
@@ -50,7 +62,7 @@ export default function TaskForm({ task, onClose }: Props) {
       reminder_minutes: reminder.minutes,
       reminder_time: reminder.time,
     }
-    run(() => (task ? mutate({ method: 'PUT', path: `/tasks/${task.id}`, body }) : mutate({ method: 'POST', path: '/tasks', body: { ...body, id: uid() } })))
+    return run(() => (task ? mutate({ method: 'PUT', path: `/tasks/${task.id}`, body }) : mutate({ method: 'POST', path: '/tasks', body: { ...body, id: uid() } })))
   }
 
   const remove = () =>
@@ -60,7 +72,7 @@ export default function TaskForm({ task, onClose }: Props) {
     )
 
   return (
-    <Sheet title={task ? 'Tâche' : 'Nouvelle tâche'} busy={busy} onClose={onClose} onSubmit={save}>
+    <Sheet title={task ? 'Tâche' : 'Nouvelle tâche'} busy={busy} dirty={dirty} onClose={onClose} onSubmit={save}>
       <input className="title-input" placeholder="À faire…" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={200} autoFocus={!task} />
 
       <div className="group">
@@ -69,16 +81,10 @@ export default function TaskForm({ task, onClose }: Props) {
         <input type="date" value={due} onChange={(e) => setDue(e.target.value)} />
       </label>
 
-      <label className="row">
+      <div className="row">
         <span>Répéter</span>
-        <select value={repeat} onChange={(e) => setRepeat(e.target.value)}>
-          {REPEATS.map((r) => (
-            <option key={r.key} value={r.key}>
-              {r.label}
-            </option>
-          ))}
-        </select>
-      </label>
+        <Choice label="Répéter" value={repeat} options={REPEATS.map((r) => ({ value: r.key, label: r.label }))} onChange={setRepeat} />
+      </div>
       {repeat !== 'none' && <p className="hint">Une fois cochée, la tâche revient à son échéance suivante.</p>}
 
       <ReminderPicker value={reminder} timed={false} onChange={setReminder} />

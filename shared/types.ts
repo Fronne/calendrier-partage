@@ -11,8 +11,8 @@ export const BOTH_COLOR = '#7c3aed'
 export const CATEGORIES = [
   { id: 'work', icon: '💼', label: 'Travail' },
   { id: 'health', icon: '🩺', label: 'Santé' },
-  { id: 'outing', icon: '🍽️', label: 'Sorties' },
-  { id: 'family', icon: '👪', label: 'Famille' },
+  { id: 'outing', icon: '🎉', label: 'Sorties' },
+  { id: 'family', icon: '❤️', label: 'Famille' },
   { id: 'sport', icon: '🏃', label: 'Sport' },
   { id: 'travel', icon: '✈️', label: 'Voyage' },
   { id: 'home', icon: '🏠', label: 'Maison' },

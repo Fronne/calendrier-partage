@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { expand, fmtLocal, parseLocal } from '../../shared/recurrence'
 import { BOTH, CATEGORIES, displayTitle, type CalEvent, type Freq, type Occurrence } from '../../shared/types'
 import { errorText } from '../api'
@@ -6,9 +6,11 @@ import { nextHour } from '../dates'
 import { uid } from '../ops'
 import { isIos } from '../push'
 import { useStore } from '../store'
+import Choice from './Choice'
 import OwnerPicker from './OwnerPicker'
 import ReminderPicker, { forAllDay, reminderFrom, type Reminder } from './ReminderPicker'
 import Sheet from './Sheet'
+import TimeInput from './TimeInput'
 
 interface Props {
   event?: CalEvent
@@ -79,6 +81,12 @@ export default function EventForm({ event, occ, day, time, onClose }: Props) {
 
   const birthday = kind === 'birthday'
 
+  // Saisie en cours = les champs ne sont plus ceux de l'ouverture (null : référence à reprendre au prochain rendu)
+  const snapshot = JSON.stringify([kind, title, allDay, startDay, startTime, endDay, endTime, owner, category, repeat, until, reminder, location, notes, yearKnown])
+  const baseline = useRef<string | null>(null)
+  baseline.current ??= snapshot
+  const dirty = snapshot !== baseline.current
+
   // Autres rendez-vous de la même personne au même moment (simple avertissement, rien n'est bloqué)
   const clashes = useMemo(() => {
     if (birthday || allDay) return []
@@ -95,6 +103,8 @@ export default function EventForm({ event, occ, day, time, onClose }: Props) {
 
   const changeScope = (s: 'one' | 'series') => {
     const d = datesFor(s)
+    // Les dates changent sans que ce soit une saisie
+    if (!dirty) baseline.current = null
     setScope(s)
     setStartDay(d.start.slice(0, 10))
     setEndDay(d.end.slice(0, 10))
@@ -105,6 +115,7 @@ export default function EventForm({ event, occ, day, time, onClose }: Props) {
   }
 
   const changeKind = (k: 'event' | 'birthday') => {
+    if (!dirty) baseline.current = null
     setKind(k)
     setReminder(k === 'birthday' ? DEFAULT_BIRTHDAY_REMINDER : DEFAULT_REMINDER)
     setOwner(k === 'birthday' ? BOTH : me.id)
@@ -133,18 +144,26 @@ export default function EventForm({ event, occ, day, time, onClose }: Props) {
       await fn()
       onClose()
       done?.()
+      return true
     } catch (e) {
       setError(errorText(e))
       setBusy(false)
+      return false
     }
   }
 
+  const refuse = (message: string) => {
+    setError(message)
+    return false
+  }
+
+  /** Renvoie false si rien n'a été enregistré : le panneau, s'il avait été écarté d'un geste, revient. */
   const save = () => {
-    if (!title.trim()) return setError(birthday ? 'Indiquez le prénom.' : 'Donnez un titre au rendez-vous.')
+    if (!title.trim()) return refuse(birthday ? 'Indiquez le prénom.' : 'Donnez un titre au rendez-vous.')
     const whole = birthday || allDay
     const start = whole ? startDay : `${startDay}T${startTime}`
     const end = birthday ? startDay : allDay ? endDay : `${endDay}T${endTime}`
-    if (end < start) return setError('La fin est avant le début.')
+    if (end < start) return refuse('La fin est avant le début.')
     const rep = birthday ? REPEATS[5] : one ? REPEATS[0] : (REPEATS.find((r) => r.key === repeat) ?? REPEATS[0])
     const body = {
       title: title.trim(),
@@ -165,7 +184,7 @@ export default function EventForm({ event, occ, day, time, onClose }: Props) {
     }
     if (!event) return run(() => mutate({ method: 'POST', path: '/events', body: { ...body, id: uid() } }))
     if (one) return run(() => mutate({ method: 'POST', path: `/events/${event.id}/detach`, body: { day: occ!.day, event: { ...body, id: uid() } } }))
-    run(() => mutate({ method: 'PUT', path: `/events/${event.id}`, body }))
+    return run(() => mutate({ method: 'PUT', path: `/events/${event.id}`, body }))
   }
 
   const remove = () => {
@@ -186,7 +205,7 @@ export default function EventForm({ event, occ, day, time, onClose }: Props) {
   const heading = birthday ? 'Anniversaire' : event ? 'Rendez-vous' : 'Ajouter'
 
   return (
-    <Sheet title={heading} busy={busy} onClose={onClose} onSubmit={save}>
+    <Sheet title={heading} busy={busy} dirty={dirty} onClose={onClose} onSubmit={save}>
       {!event && (
         <div className="segmented">
           <button type="button" className={!birthday ? 'on accent' : ''} onClick={() => changeKind('event')}>
@@ -235,14 +254,14 @@ export default function EventForm({ event, occ, day, time, onClose }: Props) {
             <span>Début</span>
             <span className="inputs">
               <input type="date" value={startDay} onChange={(e) => moveStart(e.target.value, startTime)} required />
-              {!allDay && <input type="time" value={startTime} onChange={(e) => moveStart(startDay, e.target.value)} required />}
+              {!allDay && <TimeInput label="Début" value={startTime} onChange={(t) => moveStart(startDay, t)} />}
             </span>
           </div>
           <div className="row">
             <span>Fin</span>
             <span className="inputs">
               <input type="date" value={endDay} min={startDay} onChange={(e) => e.target.value && setEndDay(e.target.value)} required />
-              {!allDay && <input type="time" value={endTime} onChange={(e) => e.target.value && setEndTime(e.target.value)} required />}
+              {!allDay && <TimeInput label="Fin" value={endTime} onChange={setEndTime} />}
             </span>
           </div>
         </div>
@@ -275,16 +294,10 @@ export default function EventForm({ event, occ, day, time, onClose }: Props) {
 
       <div className="group">
       {!birthday && !one && (
-        <label className="row">
+        <div className="row">
           <span>Répéter</span>
-          <select value={repeat} onChange={(e) => setRepeat(e.target.value)}>
-            {REPEATS.map((r) => (
-              <option key={r.key} value={r.key}>
-                {r.label}
-              </option>
-            ))}
-          </select>
-        </label>
+          <Choice label="Répéter" value={repeat} options={REPEATS.map((r) => ({ value: r.key, label: r.label }))} onChange={setRepeat} />
+        </div>
       )}
       {!birthday && !one && repeat !== 'none' && (
         <label className="row">
