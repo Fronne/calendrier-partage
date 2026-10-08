@@ -29,6 +29,8 @@ export const CATEGORIES: Category[] = [
       { id: 'sport', icon: '🏃', label: 'Course à pied' },
       { id: 'sport-volley', icon: '🏐', label: 'Volley' },
       { id: 'sport-badminton', icon: '🏸', label: 'Badminton' },
+      { id: 'sport-tennis', icon: '🎾', label: 'Tennis' },
+      { id: 'sport-padel', icon: '🏓', label: 'Padel' },
       { id: 'sport-bike', icon: '🚴', label: 'Vélo' },
       { id: 'sport-swim', icon: '🏊', label: 'Natation' },
       { id: 'sport-gym', icon: '🏋️', label: 'Muscu' },

@@ -1,6 +1,6 @@
 import { addDays, DAY, fmtDay, parseLocal } from '../shared/recurrence'
 
-export { addDays, occurrencesByDay, occTimeLabel } from '../shared/recurrence'
+export { addDays, lastDayOf, occurrencesByDay, occTimeLabel } from '../shared/recurrence'
 
 const pad = (n: number) => String(n).padStart(2, '0')
 
@@ -27,6 +27,23 @@ export function monthGrid(monthDay: string): string[] {
   const daysInMonth = new Date(Date.UTC(first.getUTCFullYear(), first.getUTCMonth() + 1, 0)).getUTCDate()
   const cells = Math.ceil((offset + daysInMonth) / 7) * 7
   return Array.from({ length: cells }, (_, i) => fmtDay(new Date(first.getTime() + (i - offset) * DAY)))
+}
+
+/**
+ * Range sur des lignes des bandes qui couvrent chacune les colonnes `from` à `to` (incluses) :
+ * chaque bande prend la première ligne (`slot`) libre sur toute sa longueur.
+ */
+export function packSpans<T extends { from: number; to: number }>(spans: T[]): (T & { slot: number })[] {
+  /** Dernière colonne occupée de chaque ligne. */
+  const ends: number[] = []
+  return [...spans]
+    .sort((a, b) => a.from - b.from || b.to - a.to)
+    .map((s) => {
+      let slot = ends.findIndex((end) => end < s.from)
+      if (slot < 0) slot = ends.length
+      ends[slot] = s.to
+      return { ...s, slot }
+    })
 }
 
 /** Lundi de la semaine qui contient ce jour. */

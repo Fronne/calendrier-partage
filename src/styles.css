@@ -672,6 +672,42 @@ p {
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 55%, transparent);
 }
 
+/* Rendez-vous sur plusieurs jours : une bande étirée sur ses jours ; bord droit du côté où il continue hors de la semaine */
+.pill.cut-l {
+  margin-left: 0;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+.pill.cut-r {
+  margin-right: 0;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+/* Mois : la bande est posée par-dessus ses cases, à la hauteur de sa ligne (--slot) */
+.grid {
+  --num-h: 28px;
+  --pill-h: 18px;
+}
+
+.grid.compact {
+  --num-h: 22px;
+  --pill-h: 16px;
+}
+
+.pill.bar {
+  align-self: start;
+  z-index: 1;
+  margin: calc(5px + var(--num-h) + var(--slot) * (var(--pill-h) + 2px)) 1px 0;
+  pointer-events: none;
+}
+
+/* Ligne laissée vide dans la case, sous une bande */
+.pill.under {
+  visibility: hidden;
+}
+
 .pill.holiday-pill {
   background: var(--danger-soft);
   color: var(--danger);
@@ -789,15 +825,19 @@ p {
 
 .week-allday {
   border-bottom: 1px solid var(--line);
-  padding-bottom: 4px;
+  padding-bottom: 2px;
   min-height: 8px;
+}
+
+.week-allday > .pill {
+  margin: 0 1px 2px;
 }
 
 .week-stack {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding: 0 1px;
+  padding: 0 1px 2px;
   min-width: 0;
 }
 

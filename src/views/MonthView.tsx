@@ -1,9 +1,9 @@
 import { Fragment, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
-import { displayTitle, eventIcon, type CalEvent, type Task } from '../../shared/types'
+import { displayTitle, eventIcon, type CalEvent, type Occurrence, type Task } from '../../shared/types'
 import { colorOf, tint } from '../colors'
 import Icon from '../components/Icon'
 import { DayItems, DayNote, Empty } from '../components/Items'
-import { addMonths, fmtLongDay, fmtMonth, isoWeek, monthGrid, monthStart, occurrencesByDay, todayKey } from '../dates'
+import { addMonths, fmtLongDay, fmtMonth, isoWeek, lastDayOf, monthGrid, monthStart, occurrencesByDay, packSpans, todayKey } from '../dates'
 import { useStore } from '../store'
 
 interface Props {
@@ -35,6 +35,24 @@ export default function MonthView({ events, tasks, selectedDay, onSelectDay, wee
 
   const grid = useMemo(() => monthGrid(month), [month])
   const byDay = useMemo(() => occurrencesByDay(events, grid[0], grid[grid.length - 1]), [events, grid])
+  // Un rendez-vous sur plusieurs jours : une seule bande par semaine, étirée sur ses jours, au lieu d'un titre par case
+  const bars = useMemo(() => {
+    const weeks = []
+    for (let w = 0; w < grid.length; w += 7) {
+      const days = grid.slice(w, w + 7)
+      const long = new Set<Occurrence>()
+      for (const d of days) for (const o of byDay.get(d) ?? []) if (lastDayOf(o) > o.day) long.add(o)
+      const spans = [...long].map((occ) => {
+        const from = days.indexOf(occ.day)
+        const to = days.indexOf(lastDayOf(occ))
+        // Absent de la semaine : commencé avant, ou fini après
+        return { occ, from: Math.max(0, from), to: to < 0 ? 6 : to, before: from < 0, after: to < 0 }
+      })
+      // Sans ligne libre, il redevient un titre ordinaire, compté dans « +n »
+      weeks.push(packSpans(spans).filter((s) => s.slot < MAX_LINES))
+    }
+    return weeks
+  }, [grid, byDay])
   const tasksByDay = useMemo(() => {
     const map = new Map<string, Task[]>()
     for (const t of tasks) if (t.due_date) map.set(t.due_date, [...(map.get(t.due_date) ?? []), t])
@@ -64,6 +82,8 @@ export default function MonthView({ events, tasks, selectedDay, onSelectDay, wee
     }
   }, [grid.length])
 
+  /** Colonne du lundi dans la grille. */
+  const firstCol = weekNums ? 2 : 1
   const go = (n: number) => setMonth((m) => addMonths(m, n))
   const select = (day: string) => {
     onSelectDay(day)
@@ -116,8 +136,11 @@ export default function MonthView({ events, tasks, selectedDay, onSelectDay, wee
         ))}
         {grid.map((day, i) => {
           const info = dayInfo(day)
+          const week = Math.floor(i / 7)
+          const col = i % 7
+          const covering = bars[week].filter((b) => b.from <= col && col <= b.to)
           const lines = [
-            ...(byDay.get(day) ?? []).map((o) => ({
+            ...(byDay.get(day) ?? []).filter((o) => !covering.some((b) => b.occ === o)).map((o) => ({
               key: o.event.id,
               icon: eventIcon(o.event),
               label: displayTitle(o.event),
@@ -126,12 +149,19 @@ export default function MonthView({ events, tasks, selectedDay, onSelectDay, wee
             })),
             ...(tasksByDay.get(day) ?? []).filter((t) => !t.done).map((t) => ({ key: t.id, icon: '', label: t.title, color: colorOf(t.owner, members), task: true })),
           ]
-          const pill = (l: (typeof lines)[number]) => (
-            <span key={l.key} className={l.task ? 'pill task' : 'pill'} style={tint(l.color)}>
-              {l.icon && <span className="ico">{l.icon}</span>}
-              {l.label}
-            </span>
-          )
+          const count = lines.length + covering.length
+          // Sous une bande, la ligne reste vide ; les autres titres prennent les lignes libres
+          const slots = Array.from({ length: MAX_LINES }, (_, s) => (covering.some((b) => b.slot === s) ? null : lines.shift()))
+          const used = slots.reduce((n, l, s) => (l !== undefined ? s + 1 : n), 0)
+          const pill = (l: (typeof slots)[number], s: number) =>
+            l ? (
+              <span key={s} className={l.task ? 'pill task' : 'pill'} style={tint(l.color)}>
+                {l.icon && <span className="ico">{l.icon}</span>}
+                {l.label}
+              </span>
+            ) : (
+              <span key={s} className="pill under" />
+            )
           const cls = [
             'cell',
             monthStart(day) !== month && 'out',
@@ -145,29 +175,43 @@ export default function MonthView({ events, tasks, selectedDay, onSelectDay, wee
           return (
             <Fragment key={day}>
               {weekNums && i % 7 === 0 && (
-                <span className="weeknum" aria-label={`Semaine ${isoWeek(day)}`}>
+                <span className="weeknum" style={{ gridRow: week + 2, gridColumn: 1 }} aria-label={`Semaine ${isoWeek(day)}`}>
                   {isoWeek(day)}
                 </span>
               )}
               <button
                 className={cls}
-                aria-label={[fmtLongDay(day), info.holiday, lines.length > 0 && `${lines.length} élément${lines.length > 1 ? 's' : ''}`].filter(Boolean).join(', ')}
+                style={{ gridRow: week + 2, gridColumn: col + firstCol }}
+                aria-label={[fmtLongDay(day), info.holiday, count > 0 && `${count} élément${count > 1 ? 's' : ''}`].filter(Boolean).join(', ')}
                 aria-current={day === today ? 'date' : undefined}
                 aria-pressed={day === selectedDay}
                 onClick={() => select(day)}
               >
                 <span className="num">{Number(day.slice(8))}</span>
-                {lines.slice(0, MAX_LINES - 1).map(pill)}
-                {lines.length >= MAX_LINES && (
+                {slots.slice(0, Math.min(used, MAX_LINES - 1)).map(pill)}
+                {used >= MAX_LINES && (
                   <span className="last">
-                    {pill(lines[MAX_LINES - 1])}
-                    {lines.length > MAX_LINES && <span className="more">+{lines.length - MAX_LINES}</span>}
+                    {pill(slots[MAX_LINES - 1], MAX_LINES - 1)}
+                    {lines.length > 0 && <span className="more">+{lines.length}</span>}
                   </span>
                 )}
               </button>
             </Fragment>
           )
         })}
+        {bars.flatMap((spans, week) =>
+          spans.map((b) => (
+            <span
+              key={`${b.occ.event.id}:${b.occ.day}:${week}`}
+              className={['pill bar', b.before && 'cut-l', b.after && 'cut-r'].filter(Boolean).join(' ')}
+              style={{ gridRow: week + 2, gridColumn: `${b.from + firstCol} / ${b.to + firstCol + 1}`, '--slot': b.slot, ...tint(colorOf(b.occ.event.owner, members)) } as CSSProperties}
+              aria-hidden="true"
+            >
+              {eventIcon(b.occ.event) && <span className="ico">{eventIcon(b.occ.event)}</span>}
+              {displayTitle(b.occ.event)}
+            </span>
+          )),
+        )}
       </div>
 
       <h2 className="day-title">{fmtLongDay(selectedDay)}</h2>

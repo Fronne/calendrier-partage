@@ -3,7 +3,7 @@ import { displayTitle, eventIcon, type CalEvent, type Occurrence, type Task } fr
 import { colorOf, tint } from '../colors'
 import Icon from '../components/Icon'
 import { DayItems, DayNote, Empty } from '../components/Items'
-import { addDays, fmtLongDay, fmtRange, isoWeek, minutesOf, mondayOf, occurrencesByDay, todayKey } from '../dates'
+import { addDays, fmtLongDay, fmtRange, isoWeek, lastDayOf, minutesOf, mondayOf, occurrencesByDay, packSpans, todayKey } from '../dates'
 import { useStore } from '../store'
 
 interface Props {
@@ -64,11 +64,21 @@ export default function WeekView({ events, tasks, selectedDay, onSelectDay, onNe
   const monday = mondayOf(selectedDay)
 
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(monday, i)), [monday])
-  const { columns, byDay } = useMemo(() => {
+  const { columns, byDay, bars } = useMemo(() => {
     const byDay = occurrencesByDay(events, days[0], days[6])
     const columns = days.map((day) => ({ day, ...layout(byDay.get(day) ?? [], day), tasks: tasks.filter((t) => t.due_date === day && !t.done) }))
-    return { columns, byDay }
+    // Ce qui occupe plusieurs journées entières de suite : une seule bande étirée sur ces jours
+    const spans = new Map<Occurrence, { occ: Occurrence; from: number; to: number }>()
+    columns.forEach((col, i) => {
+      for (const occ of col.allDay) {
+        const span = spans.get(occ)
+        if (span) span.to = i
+        else spans.set(occ, { occ, from: i, to: i })
+      }
+    })
+    return { columns, byDay, bars: packSpans([...spans.values()]) }
   }, [events, tasks, days])
+  const barRows = Math.max(0, ...bars.map((b) => b.slot + 1))
 
   const dayOccs = byDay.get(selectedDay) ?? []
   const dayTasks = tasks.filter((t) => t.due_date === selectedDay)
@@ -145,26 +155,40 @@ export default function WeekView({ events, tasks, selectedDay, onSelectDay, onNe
           })}
         </div>
 
+        {/* De haut en bas : jours fériés, rendez-vous de la journée (une ligne par bande), tâches */}
         <div className="week-row week-allday">
-          <span />
-          {columns.map((col) => {
+          {columns.map((col, i) => {
             const holiday = dayInfo(col.day).holiday
             return (
-              <div key={col.day} className="week-stack">
-                {holiday && <span className="pill holiday-pill">{holiday}</span>}
-                {col.allDay.map((occ) => (
-                  <button key={occ.event.id} className="pill" style={tint(colorOf(occ.event.owner, members))} onClick={() => openEvent(occ)}>
-                    {label(occ)}
-                  </button>
-                ))}
-                {col.tasks.map((t) => (
-                  <button key={t.id} className="pill task" style={tint(colorOf(t.owner, members))} onClick={() => openTask(t)}>
-                    {t.title}
-                  </button>
-                ))}
-              </div>
+              holiday && (
+                <span key={col.day} className="pill holiday-pill" style={{ gridRow: 1, gridColumn: i + 2 }}>
+                  {holiday}
+                </span>
+              )
             )
           })}
+          {bars.map((b) => (
+            <button
+              key={`${b.occ.event.id}:${b.occ.day}`}
+              className={['pill', b.occ.day < days[b.from] && 'cut-l', lastDayOf(b.occ) > days[b.to] && 'cut-r'].filter(Boolean).join(' ')}
+              style={{ gridRow: b.slot + 2, gridColumn: `${b.from + 2} / ${b.to + 3}`, ...tint(colorOf(b.occ.event.owner, members)) }}
+              onClick={() => openEvent(b.occ)}
+            >
+              {label(b.occ)}
+            </button>
+          ))}
+          {columns.map(
+            (col, i) =>
+              col.tasks.length > 0 && (
+                <div key={col.day} className="week-stack" style={{ gridRow: barRows + 2, gridColumn: i + 2 }}>
+                  {col.tasks.map((t) => (
+                    <button key={t.id} className="pill task" style={tint(colorOf(t.owner, members))} onClick={() => openTask(t)}>
+                      {t.title}
+                    </button>
+                  ))}
+                </div>
+              ),
+          )}
         </div>
 
         <div className="week-scroll" ref={scroller}>

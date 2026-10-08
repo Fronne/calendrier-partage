@@ -83,14 +83,19 @@ export function expand(ev: CalEvent, fromDay: string, toDay: string): Occurrence
   return out
 }
 
+/** Dernier jour sur lequel une occurrence s'affiche. */
+export function lastDayOf(occ: Occurrence): string {
+  const last = occ.end.slice(0, 10)
+  // Un événement qui finit à minuit pile ne déborde pas sur le jour suivant
+  return !occ.event.all_day && occ.end.slice(11) === '00:00' && last > occ.day ? addDays(last, -1) : last
+}
+
 /** Occurrences rangées par jour affiché ; un événement sur plusieurs jours apparaît chaque jour concerné. */
 export function occurrencesByDay(events: CalEvent[], from: string, to: string): Map<string, Occurrence[]> {
   const map = new Map<string, Occurrence[]>()
   for (const ev of events) {
     for (const occ of expand(ev, from, to)) {
-      let last = occ.end.slice(0, 10)
-      // Un événement qui finit à minuit pile ne déborde pas sur le jour suivant
-      if (!ev.all_day && occ.end.slice(11) === '00:00' && last > occ.day) last = addDays(last, -1)
+      const last = lastDayOf(occ)
       for (let d = occ.day < from ? from : occ.day; d <= last && d <= to; d = addDays(d, 1)) {
         if (!map.has(d)) map.set(d, [])
         map.get(d)!.push(occ)
