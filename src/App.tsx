@@ -13,6 +13,7 @@ import { dayInfoFor, getZone, saveZone, useSchoolHolidays } from './holidays'
 import { disablePush } from './push'
 import { StoreCtx, type Store } from './store'
 import { CACHE_KEY, QUEUE_KEY, useSync } from './useSync'
+import ActivityView from './views/ActivityView'
 import AgendaView from './views/AgendaView'
 import MonthView from './views/MonthView'
 import SearchView from './views/SearchView'
@@ -30,6 +31,8 @@ type CalView = 'month' | 'week'
 const TITLES: Record<Tab, string> = { month: 'Calendrier', agenda: 'À venir', tasks: 'Tâches', settings: 'Réglages' }
 const VIEW_KEY = 'cal.view'
 const TOAST_MS = 6000
+/** Dernier changement du journal déjà vu sur ce téléphone (son numéro). */
+const SEEN_KEY = 'cal.activity.seen'
 
 export default function App() {
   const [token, setTok] = useState(getToken)
@@ -69,6 +72,10 @@ function Calendar({ onLogout }: { onLogout: () => void }) {
   const periods = useSchoolHolidays(zone)
   // Le geste « retour » du téléphone referme la recherche au lieu de quitter l'application
   useBackClose(() => setQuery(null), query !== null)
+  // Journal des derniers changements : `seen` est le dernier déjà vu ; ouvert, `journal` garde celui d'avant l'ouverture
+  const [seen, setSeen] = useState(() => Number(localStorage.getItem(SEEN_KEY)) || 0)
+  const [journal, setJournal] = useState<number | null>(null)
+  useBackClose(() => setJournal(null), journal !== null)
 
   // Le bouton « + » du widget Android ouvre l'application sur un nouveau rendez-vous (/?new=1)
   useEffect(() => {
@@ -120,6 +127,14 @@ function Calendar({ onLogout }: { onLogout: () => void }) {
   const events = data.events.filter((e) => shown(e.owner))
   const tasks = data.tasks.filter((t) => shown(t.owner))
   const searching = query !== null
+  const activity = data.activity ?? []
+  const unseen = activity.filter((a) => a.member_id !== data.me && a.id > seen).length
+  const openJournal = () => {
+    setJournal(seen)
+    const latest = Math.max(seen, ...activity.map((a) => a.id))
+    localStorage.setItem(SEEN_KEY, String(latest))
+    setSeen(latest)
+  }
   const close = () => setEditing(null)
 
   const chooseView = (v: CalView) => {
@@ -143,6 +158,16 @@ function Calendar({ onLogout }: { onLogout: () => void }) {
             <div className="search-bar">
               <input type="search" placeholder="Rechercher…" aria-label="Rechercher" value={query} onChange={(e) => setQuery(e.target.value)} autoFocus />
               <button className="link" onClick={() => setQuery(null)}>
+                Fermer
+              </button>
+            </div>
+          ) : journal !== null ? (
+            <div className="title-row">
+              <div className="titles">
+                <span className="eyebrow">Derniers changements</span>
+                <h1>Activité</h1>
+              </div>
+              <button className="link" onClick={() => setJournal(null)}>
                 Fermer
               </button>
             </div>
@@ -172,7 +197,7 @@ function Calendar({ onLogout }: { onLogout: () => void }) {
               )}
             </div>
           )}
-          {tab !== 'settings' && !searching && (
+          {tab !== 'settings' && !searching && journal === null && (
             <div className="chips">
               <button className={filter === 'all' ? 'chip on' : 'chip'} aria-pressed={filter === 'all'} onClick={() => setFilter('all')}>
                 Tous
@@ -183,6 +208,10 @@ function Calendar({ onLogout }: { onLogout: () => void }) {
                   {m.name}
                 </button>
               ))}
+              <button className="chip bell" aria-label={unseen ? `Activité récente : ${unseen} nouveau${unseen > 1 ? 'x' : ''} changement${unseen > 1 ? 's' : ''}` : 'Activité récente'} onClick={openJournal}>
+                <Icon name="bell" size={18} />
+                {unseen > 0 && <span className="count">{unseen}</span>}
+              </button>
             </div>
           )}
         </header>
@@ -205,6 +234,8 @@ function Calendar({ onLogout }: { onLogout: () => void }) {
         <main className="content">
           {searching ? (
             <SearchView query={query} events={data.events} tasks={data.tasks} />
+          ) : journal !== null ? (
+            <ActivityView activity={activity} seen={journal} />
           ) : (
             <>
               {tab === 'month' && calView === 'month' && <MonthView events={events} tasks={tasks} selectedDay={selectedDay} onSelectDay={setSelectedDay} weekNums={weekNums} />}
@@ -237,7 +268,7 @@ function Calendar({ onLogout }: { onLogout: () => void }) {
           )}
         </main>
 
-        {tab !== 'settings' && !searching && (
+        {tab !== 'settings' && !searching && journal === null && (
           <button
             className="fab"
             aria-label={tab === 'tasks' ? 'Nouvelle tâche' : 'Nouveau rendez-vous'}
@@ -267,6 +298,7 @@ function Calendar({ onLogout }: { onLogout: () => void }) {
           tab={tab}
           onChange={(t) => {
             setQuery(null)
+            setJournal(null)
             setTab(t)
           }}
         />

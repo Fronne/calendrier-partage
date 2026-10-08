@@ -1,4 +1,4 @@
-import type { CalEvent, Member, Task } from '../shared/types'
+import type { Activity, CalEvent, Member, Task } from '../shared/types'
 import type { Env } from './env'
 
 export function rowToEvent(r: any): CalEvent {
@@ -31,4 +31,11 @@ export async function setMeta(env: Env, key: string, value: string): Promise<voi
   await env.DB.prepare('INSERT INTO meta (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value')
     .bind(key, value)
     .run()
+}
+
+/** Changements montrés dans l'application, du plus récent au plus ancien. */
+const ACTIVITY_SHOWN = 30
+
+export async function recentActivity(env: Env): Promise<Activity[]> {
+  return (await env.DB.prepare('SELECT * FROM activity ORDER BY id DESC LIMIT ?').bind(ACTIVITY_SHOWN).all<Activity>()).results
 }

@@ -136,11 +136,26 @@ export interface Occurrence {
   day: string
 }
 
+/** Un changement du journal : « Léa a ajouté un rendez-vous » + ce dont il s'agit. */
+export interface Activity {
+  id: number
+  member_id: string
+  /** Complète la phrase « Léa … » */
+  action: string
+  body: string
+  /** Rendez-vous concerné, s'il peut encore être ouvert */
+  event_id: string | null
+  /** Instant du changement (ISO, UTC) */
+  created_at: string
+}
+
 export interface SyncData {
   me: string
   members: Member[]
   events: CalEvent[]
   tasks: Task[]
+  /** Derniers changements, du plus récent au plus ancien ; absent d'une copie gardée par une ancienne version */
+  activity?: Activity[]
 }
 
 export interface HolidayPeriod {

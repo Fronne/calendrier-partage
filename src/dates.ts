@@ -89,6 +89,18 @@ export const fmtFullDay = (day: string) => fullDayFmt.format(parseLocal(day))
 /** « Mercredi 7 octobre », pour l'en-tête. */
 export const fmtToday = () => capital(longDayFmt.format(parseLocal(todayKey())))
 
+/** « à l'instant », « il y a 2 h », « hier à 18:30 », puis la date : pour un instant passé (ISO). */
+export function fmtAgo(iso: string): string {
+  const then = new Date(iso)
+  const minutes = Math.floor((Date.now() - then.getTime()) / 60_000)
+  if (minutes < 1) return "à l'instant"
+  if (minutes < 60) return `il y a ${minutes} min`
+  if (minutes < 24 * 60) return `il y a ${Math.floor(minutes / 60)} h`
+  const day = `${then.getFullYear()}-${pad(then.getMonth() + 1)}-${pad(then.getDate())}`
+  const time = `${pad(then.getHours())}:${pad(then.getMinutes())}`
+  return `${day === addDays(todayKey(), -1) ? 'hier' : fmtShortDay(day)} à ${time}`
+}
+
 export function fmtLongDay(day: string): string {
   const today = todayKey()
   const label = capital(longDayFmt.format(parseLocal(day)))

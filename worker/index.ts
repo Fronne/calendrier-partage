@@ -2,7 +2,7 @@ import { Hono, type Context } from 'hono'
 import { parseLocal } from '../shared/recurrence'
 import { BOTH, displayTitle, eventIcon, FREQS, isCategory, type CalEvent, type Freq, type Member, type SyncData } from '../shared/types'
 import { codeMatches, makeToken, verifyToken } from './auth'
-import { allEvents, allMembers, allTasks, getMeta, rowToEvent } from './db'
+import { allEvents, allMembers, allTasks, getMeta, recentActivity, rowToEvent } from './db'
 import type { Env } from './env'
 import { schoolHolidays, ZONE_ACADEMY } from './holidays'
 import { deliver, runReminders, type SubRow } from './reminders'
@@ -102,10 +102,10 @@ app.use('/api/*', async (c, next) => {
 })
 
 app.get('/api/sync', async (c) => {
-  const [members, events, tasks] = await Promise.all([allMembers(c.env), allEvents(c.env), allTasks(c.env)])
+  const [members, events, tasks, activity] = await Promise.all([allMembers(c.env), allEvents(c.env), allTasks(c.env), recentActivity(c.env)])
   const me = c.get('memberId')
   if (!members.some((m) => m.id === me)) throw new HttpError(401, 'Reconnectez-vous.')
-  return c.json({ me, members, events, tasks } satisfies SyncData)
+  return c.json({ me, members, events, tasks, activity } satisfies SyncData)
 })
 
 // Ce que le widget Android affiche : les prochains jours, déjà mis en forme
@@ -152,12 +152,22 @@ function whenLabel(local: string): string {
 const describe = (ev: CalEvent, start = ev.start_local) =>
   `${eventIcon(ev)} ${displayTitle(ev)}`.trim() + (ev.kind === 'birthday' ? '' : ` · ${whenLabel(start)}`)
 
-/** `action` complète la phrase « Léa … » ; rien n'est envoyé pour une annulation (?silent=1). */
-function notifyOther(c: Ctx, action: string, body: string) {
+/** Changements gardés dans le journal ; les plus anciens sont effacés au fur et à mesure. */
+const ACTIVITY_KEPT = 100
+
+/**
+ * `action` complète la phrase « Léa … ». Le changement est aussi noté dans le journal (activity), `eventId` désignant
+ * le rendez-vous à rouvrir depuis celui-ci. Rien n'est envoyé ni noté pour une annulation (?silent=1).
+ */
+function notifyOther(c: Ctx, action: string, body: string, eventId: string | null = null) {
   if (c.req.query('silent')) return
   const me = c.get('memberId')
   c.executionCtx.waitUntil(
     (async () => {
+      await c.env.DB.batch([
+        c.env.DB.prepare('INSERT INTO activity (member_id, action, body, event_id, created_at) VALUES (?, ?, ?, ?, ?)').bind(me, action, body, eventId, now()),
+        c.env.DB.prepare('DELETE FROM activity WHERE id <= (SELECT MAX(id) FROM activity) - ?').bind(ACTIVITY_KEPT),
+      ])
       const members = await allMembers(c.env)
       const actor = members.find((m) => m.id === me)
       const targets = members.filter((m) => m.id !== me && m.notify_changes).map((m) => m.id)
@@ -245,7 +255,7 @@ app.post('/api/events', async (c) => {
   const e = await cleanEvent(c.env, b)
   const id = idFrom(b.id)
   const res = await insertEvent(c.env, id, e).run()
-  if (res.meta.changes) notifyOther(c, e.kind === 'birthday' ? 'a ajouté un anniversaire' : 'a ajouté un rendez-vous', describe(asEvent(e)))
+  if (res.meta.changes) notifyOther(c, e.kind === 'birthday' ? 'a ajouté un anniversaire' : 'a ajouté un rendez-vous', describe(asEvent(e)), id)
   return c.json({ id })
 })
 
@@ -262,7 +272,7 @@ app.put('/api/events/:id', async (c) => {
       e.reminder_minutes, e.reminder_time, e.category, e.kind, e.birth_year, now(), e.start_local, e.start_local, c.req.param('id'))
     .run()
   if (!res.meta.changes) throw new HttpError(404, "Ce rendez-vous n'existe plus.")
-  notifyOther(c, e.kind === 'birthday' ? 'a modifié un anniversaire' : 'a modifié un rendez-vous', describe(asEvent(e)))
+  notifyOther(c, e.kind === 'birthday' ? 'a modifié un anniversaire' : 'a modifié un rendez-vous', describe(asEvent(e)), c.req.param('id'))
   return c.json({ ok: true })
 })
 
@@ -289,7 +299,7 @@ app.post('/api/events/:id/exdate', async (c) => {
   const { day } = await c.req.json()
   if (!DATE.test(day)) throw bad('Date invalide.')
   const ev = await setExdates(c, (ex) => [...new Set([...ex, day])])
-  notifyOther(c, 'a supprimé une date', describe(ev, day + ev.start_local.slice(10)))
+  notifyOther(c, 'a supprimé une date', describe(ev, day + ev.start_local.slice(10)), ev.id)
   return c.json({ ok: true })
 })
 
@@ -306,11 +316,12 @@ app.post('/api/events/:id/detach', async (c) => {
   const e = await cleanEvent(c.env, { ...b.event, rec_freq: 'none', exdates: [] })
   const series = await getEvent(c.env, c.req.param('id'))
   if (!series) throw new HttpError(404, "Ce rendez-vous n'existe plus.")
+  const id = idFrom(b.event?.id)
   await c.env.DB.batch([
     c.env.DB.prepare('UPDATE events SET exdates = ?, updated_at = ? WHERE id = ?').bind(JSON.stringify([...new Set([...series.exdates, b.day])]), now(), series.id),
-    insertEvent(c.env, idFrom(b.event?.id), e),
+    insertEvent(c.env, id, e),
   ])
-  notifyOther(c, 'a modifié un rendez-vous', describe(asEvent(e)))
+  notifyOther(c, 'a modifié un rendez-vous', describe(asEvent(e)), id)
   return c.json({ ok: true })
 })
 
